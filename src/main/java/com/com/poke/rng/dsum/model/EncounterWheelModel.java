@@ -3,6 +3,7 @@ package com.com.poke.rng.dsum.model;
 import com.com.poke.rng.dsum.constants.EncounterSlot;
 
 import java.awt.event.KeyEvent;
+import java.util.List;
 
 public class EncounterWheelModel {
 
@@ -15,8 +16,7 @@ public class EncounterWheelModel {
             (WIPE_ANIMATION_TIME_NS / (CYCLE_NS * 2)) * 360.0;
     public static final double OFFSET_STEP_DEG = 3.0;
 
-    private EncounterSlot targetSlot;
-    private int[] warningPoints;
+    private List<EncounterSlot> targetSlots;
 
     private double angleDeg;
     private double angleOffset;
@@ -29,8 +29,7 @@ public class EncounterWheelModel {
     private boolean warningBeepPending;
 
     public EncounterWheelModel(final EncounterSlot targetSlot) {
-        this.targetSlot = targetSlot;
-        this.warningPoints = computeWarningPoints(targetSlot);
+        this.targetSlots = List.of(targetSlot);
         this.lastDSum = -1;
         this.spacePressedNanos = -1;
     }
@@ -41,15 +40,6 @@ public class EncounterWheelModel {
 
     private static int dsumFromAngle(final double angleDegrees) {
         return (int) ((angleDegrees / 360.0) * DSUM_RANGE) & 0xFF;
-    }
-
-    private static int[] computeWarningPoints(final EncounterSlot target) {
-        int enterAt = target.max();
-        return new int[]{
-                (enterAt + LEAD_DSUM) & 0xFF,
-                (enterAt + LEAD_DSUM * 2 / 3) & 0xFF,
-                (enterAt + LEAD_DSUM / 3) & 0xFF
-        };
     }
 
     private static double norm360(double angle) {
@@ -71,16 +61,6 @@ public class EncounterWheelModel {
         return x >= start || x <= end;
     }
 
-    private static boolean crossedBoundary(final int prev, final int current, final int target) {
-        if (prev == -1) {
-            return false;
-        }
-        if (prev >= current) {
-            return target < prev && target >= current;
-        }
-        return target < prev || target >= current;
-    }
-
     public void update(final long now) {
         if (spacePressedNanos != -1) {
             final long timeSinceSpace = now - spacePressedNanos;
@@ -96,14 +76,7 @@ public class EncounterWheelModel {
         angleDeg = -(elapsed / CYCLE_NS) * 360.0 + angleOffset + manualAngleOffsetDeltaDeg;
         uncertaintyWedgeExtentDeltaDeg += 0.01;
 
-        final int dsum = getDsum();
-        for (int warningPoint : warningPoints) {
-            if (crossedBoundary(lastDSum, dsum, warningPoint)) {
-                warningBeepPending = true;
-                break;
-            }
-        }
-        lastDSum = dsum;
+        lastDSum =  getDsum();
     }
 
     public void handleKeyPress(final KeyEvent e, final long now) {
@@ -184,10 +157,15 @@ public class EncounterWheelModel {
         final double arrowWheelDeg = 90 + angleDeg;
         final double w1 = norm360(arrowWheelDeg - wedgeExtent / 2);
         final double w2 = norm360(arrowWheelDeg + wedgeExtent / 2);
-        final double t1 = norm360((targetSlot.min() / (double) DSUM_RANGE) * 360 + 90);
-        final double t2 = norm360(((targetSlot.max() + 1) / (double) DSUM_RANGE) * 360 + 90);
+        for (final EncounterSlot slot : targetSlots) {
+            final double t1 = norm360((slot.min() / (double) DSUM_RANGE) * 360 + 90);
+            final double t2 = norm360(((slot.max() + 1) / (double) DSUM_RANGE) * 360 + 90);
 
-        return angularRangesOverlap(w1, w2, t1, t2);
+            if (angularRangesOverlap(w1, w2, t1, t2)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public double getUncertaintyWedgeExtentDeg() {
@@ -206,13 +184,12 @@ public class EncounterWheelModel {
         return dsumFromAngle(angleDeg);
     }
 
-    public EncounterSlot getTargetSlot() {
-        return targetSlot;
+    public List<EncounterSlot> getTargetSlots() {
+        return targetSlots;
     }
 
-    public void setTargetSlot(final EncounterSlot slot) {
-        this.targetSlot = slot;
-        this.warningPoints = computeWarningPoints(slot);
+    public void setTargetSlots(final List<EncounterSlot> slots) {
+        this.targetSlots = slots;
     }
 
     public EncounterSlot getCalibratedSlot() {

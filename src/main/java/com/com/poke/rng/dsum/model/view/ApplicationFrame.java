@@ -18,7 +18,7 @@ public final class ApplicationFrame extends JFrame {
                 new EncounterWheelController(model, wheel, new OverlapHumPlayer());
 
         final TargetSlotPanel targetSlotPanel = new TargetSlotPanel(initialTarget, selected -> {
-            model.setTargetSlot(selected);
+            model.setTargetSlots(selected);
             wheel.repaint();
             wheel.requestFocusInWindow();
         });

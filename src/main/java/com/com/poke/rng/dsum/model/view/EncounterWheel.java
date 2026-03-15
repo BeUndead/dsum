@@ -109,7 +109,7 @@ public final class EncounterWheel extends JPanel {
             int innerR = WHEEL_INNER_RADIUS;
             Color color = colorFor(slot);
 
-            if (slot == model.getTargetSlot()) {
+            if (model.getTargetSlots().contains(slot)) {
                 final double sizeScale = 1.0 + PULSE_SIZE_FRACTION * (2 * pulse - 1);
                 outerR = (int) (WHEEL_OUTER_RADIUS * sizeScale);
                 innerR = (int) (WHEEL_INNER_RADIUS * sizeScale);

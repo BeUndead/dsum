@@ -4,19 +4,20 @@ import com.com.poke.rng.dsum.constants.EncounterSlot;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 import java.util.function.Consumer;
 
 public final class TargetSlotPanel extends JPanel {
 
-    private final JComboBox<EncounterSlot> slotCombo;
+    private final JList<EncounterSlot> slotList;
 
-    public TargetSlotPanel(final EncounterSlot initialTarget, final Consumer<EncounterSlot> onTargetSelected) {
+    public TargetSlotPanel(final EncounterSlot initialTarget, final Consumer<List<EncounterSlot>> onTargetSelected) {
         super(new FlowLayout(FlowLayout.LEFT));
 
-        slotCombo = new JComboBox<>(EncounterSlot.values());
-        slotCombo.setFocusable(false);
-        slotCombo.setSelectedItem(initialTarget);
-        slotCombo.setRenderer((list, value, index, isSelected, cellHasFocus) -> {
+        slotList = new JList<>(EncounterSlot.values());
+        slotList.setFocusable(false);
+        slotList.setSelectedValue(initialTarget, true);
+        slotList.setCellRenderer((list, value, index, isSelected, cellHasFocus) -> {
             final JLabel label = new JLabel(value == null ? "" : "Slot " + value.name().replace("_", ""));
             label.setOpaque(true);
 
@@ -31,18 +32,17 @@ public final class TargetSlotPanel extends JPanel {
             return label;
         });
 
-        slotCombo.addActionListener(e -> {
-            EncounterSlot selected = (EncounterSlot) slotCombo.getSelectedItem();
-            if (selected != null) {
-                onTargetSelected.accept(selected);
+        slotList.addListSelectionListener(e -> {
+            List<EncounterSlot> selectedSlots = slotList.getSelectedValuesList();
+            if (selectedSlots != null && !selectedSlots.isEmpty()) {
+                onTargetSelected.accept(selectedSlots);
             }
         });
 
         add(new JLabel("Target slot:"));
-        add(slotCombo);
-    }
-
-    public EncounterSlot getSelectedSlot() {
-        return (EncounterSlot) slotCombo.getSelectedItem();
+        final JScrollPane scroller = new JScrollPane(slotList);
+        scroller.setPreferredSize(new Dimension(150, 60));
+        scroller.setMaximumSize(new Dimension(150, 60));
+        add(scroller);
     }
 }
