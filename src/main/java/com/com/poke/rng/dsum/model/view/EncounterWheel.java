@@ -5,6 +5,7 @@ import com.com.poke.rng.dsum.model.EncounterWheelModel;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Area;
@@ -34,6 +35,12 @@ public final class EncounterWheel extends JPanel {
         this.model = model;
         setPreferredSize(new Dimension(PREFERRED_SIZE, PREFERRED_SIZE));
         setFocusable(true);
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(final MouseEvent e) {
+                SwingUtilities.invokeLater(() -> requestFocus());
+            }
+        });
     }
 
     private static Color pulseColor(final Color color, final float amount) {
