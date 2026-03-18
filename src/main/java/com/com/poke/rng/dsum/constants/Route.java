@@ -496,7 +496,7 @@ public enum Route {
             of(Metapod, 7),
             of(Caterpie, 8)
     ),
-    VIRIDIAN_FOREST(
+    VIRIDIAN_FOREST(true,
             of(Caterpie, 4),
             of(Metapod, 5),
             of(Caterpie, 3),
@@ -519,7 +519,7 @@ public enum Route {
             of(Pikachu, 3),
             of(Pikachu, 5)
     ),
-    MT_MOON_1F(
+    MT_MOON_1F(true,
             of(Zubat, 8),
             of(Zubat, 7),
             of(Zubat, 9),
@@ -531,7 +531,7 @@ public enum Route {
             of(Zubat, 11),
             of(Clefairy, 8)
     ),
-    MT_MOON_B1F(
+    MT_MOON_B1F(true,
             of(Zubat, 8),
             of(Zubat, 7),
             of(Geodude, 7),
@@ -543,7 +543,7 @@ public enum Route {
             of(Clefairy, 9),
             of(Geodude, 9)
     ),
-    MT_MOON_B2F(
+    MT_MOON_B2F(true,
             of(Zubat, 9),
             of(Geodude, 9),
             of(Zubat, 10),
@@ -567,7 +567,7 @@ public enum Route {
             of(Dugtrio, 29),
             of(Dugtrio, 31)
     ),
-    ROCK_TUNNEL_1F(
+    ROCK_TUNNEL_1F(true,
             of(Zubat, 16),
             of(Zubat, 17),
             of(Geodude, 17),
@@ -579,7 +579,7 @@ public enum Route {
             of(Onix, 13),
             of(Onix, 15)
     ),
-    ROCK_TUNNEL_B1F(
+    ROCK_TUNNEL_B1F(true,
             of(Zubat, 16),
             of(Zubat, 17),
             of(Geodude, 17),
@@ -591,7 +591,7 @@ public enum Route {
             of(Onix, 13),
             of(Geodude, 18)
     ),
-    POKEMON_TOWER_3F(
+    POKEMON_TOWER_3F(true,
             of(Gastly, 20),
             of(Gastly, 21),
             of(Gastly, 22),
@@ -603,7 +603,7 @@ public enum Route {
             of(Cubone, 22),
             of(Haunter, 25)
     ),
-    POKEMON_TOWER_4F(
+    POKEMON_TOWER_4F(true,
             of(Gastly, 20),
             of(Gastly, 21),
             of(Gastly, 22),
@@ -615,7 +615,7 @@ public enum Route {
             of(Cubone, 22),
             of(Gastly, 24)
     ),
-    POKEMON_TOWER_5F(
+    POKEMON_TOWER_5F(true,
             of(Gastly, 20),
             of(Gastly, 21),
             of(Gastly, 22),
@@ -627,7 +627,7 @@ public enum Route {
             of(Cubone, 22),
             of(Gastly, 24)
     ),
-    POKEMON_TOWER_6F(
+    POKEMON_TOWER_6F(true,
             of(Gastly, 21),
             of(Gastly, 22),
             of(Gastly, 23),
@@ -639,7 +639,7 @@ public enum Route {
             of(Cubone, 24),
             of(Haunter, 28)
     ),
-    POKEMON_TOWER_7F(
+    POKEMON_TOWER_7F(true,
             of(Gastly, 21),
             of(Gastly, 22),
             of(Gastly, 23),
@@ -651,13 +651,13 @@ public enum Route {
             of(Haunter, 28),
             of(Haunter, 30)
     ),
-    SAFARI_ZONE_CENTER(
+    SAFARI_ZONE_CENTER(true,
             of(NidoranF, 22),
             of(Rhyhorn, 25),
             of(Venonat, 22),
             of(Exeggcute, 24),
             of(Nidorina, 31),
-            of(Exeggcute, 35),
+            of(Exeggcute, 25),
             of(Nidorino, 31),
             of(Parasect, 30),
             of(Pinsir, 23),
@@ -668,13 +668,13 @@ public enum Route {
             of(Venonat, 22),
             of(Exeggcute, 24),
             of(Nidorino, 31),
-            of(Exeggcute, 35),
+            of(Exeggcute, 25),
             of(Nidorina, 31),
             of(Parasect, 30),
             of(Scyther, 23),
             of(Chansey, 23)
     ),
-    SAFARI_ZONE_EAST(
+    SAFARI_ZONE_EAST(true,
             of(NidoranF, 24),
             of(Doduo, 26),
             of(Paras, 22),
@@ -697,7 +697,7 @@ public enum Route {
             of(Kangaskhan, 25),
             of(Scyther, 28)
     ),
-    SAFARI_ZONE_2(
+    SAFARI_ZONE_2(true,
             of(NidoranF, 22),
             of(Rhyhorn, 26),
             of(Paras, 23),
@@ -720,7 +720,7 @@ public enum Route {
             of(Chansey, 26),
             of(Tauros, 28)
     ),
-    SAFARI_ZONE_3(
+    SAFARI_ZONE_3(true,
             of(NidoranF, 25),
             of(Doduo, 26),
             of(Venonat, 23),
@@ -766,7 +766,7 @@ public enum Route {
             of(Electabuzz, 33),
             of(Electabuzz, 36)
     ),
-    SEAFOAM_ISLANDS_1F(
+    SEAFOAM_ISLANDS_1F(true,
             of(Seel, 30),
             of(Psyduck, 30),
             of(Staryu, 30),
@@ -789,7 +789,7 @@ public enum Route {
             of(Shellder, 28),
             of(Golduck, 38)
     ),
-    SEAFOAM_ISLANDS_B1F(
+    SEAFOAM_ISLANDS_B1F(true,
             of(Shellder, 30),
             of(Krabby, 30),
             of(Staryu, 32),
@@ -812,7 +812,7 @@ public enum Route {
             of(Dewgong, 38),
             of(Seadra, 37)
     ),
-    SEAFOAM_ISLANDS_B2F(
+    SEAFOAM_ISLANDS_B2F(true,
             of(Seel, 30),
             of(Psyduck, 30),
             of(Seel, 32),
@@ -835,7 +835,7 @@ public enum Route {
             of(Golbat, 30),
             of(Slowbro, 37)
     ),
-    SEAFOAM_ISLANDS_B3F(
+    SEAFOAM_ISLANDS_B3F(true,
             of(Psyduck, 31),
             of(Seel, 31),
             of(Psyduck, 33),
@@ -858,7 +858,7 @@ public enum Route {
             of(Seadra, 39),
             of(Dewgong, 37)
     ),
-    SEAFOAM_ISLANDS_B4F(
+    SEAFOAM_ISLANDS_B4F(true,
             of(Krabby, 31),
             of(Staryu, 31),
             of(Krabby, 33),
@@ -1009,7 +1009,7 @@ public enum Route {
             of(Machoke, 42),
             of(Machoke, 45)
     ),
-    CERULEAN_CAVE_1F(
+    CERULEAN_CAVE_1F(true,
             of(Golbat, 46),
             of(Hypno, 46),
             of(Magneton, 46),
@@ -1032,7 +1032,7 @@ public enum Route {
             of(Raichu, 53),
             of(Ditto, 53)
     ),
-    CERULEAN_CAVE_2F(
+    CERULEAN_CAVE_2F(true,
             of(Dodrio, 51),
             of(Venomoth, 51),
             of(Kadabra, 51),
@@ -1044,7 +1044,7 @@ public enum Route {
             of(Ditto, 55),
             of(Ditto, 60)
     ),
-    CERULEAN_CAVE_B1F(
+    CERULEAN_CAVE_B1F(true,
             of(Rhydon, 55),
             of(Marowak, 55),
             of(Electrode, 55),
@@ -1069,8 +1069,14 @@ public enum Route {
     );
 
     private final Map<Game, Map<EncounterSlot, Encounter>> encounters;
+    private final boolean isBlinds;
 
     Route(final Encounter... encounters) {
+        this(false, encounters);
+    }
+
+    Route(final boolean isBlinds, final Encounter... encounters) {
+        this.isBlinds = isBlinds;
         this.encounters = new EnumMap<>(Game.class);
         final Map<EncounterSlot, Encounter> redEncounters = new EnumMap<>(EncounterSlot.class);
         final Map<EncounterSlot, Encounter> blueEncounters = new EnumMap<>(EncounterSlot.class);
@@ -1096,5 +1102,9 @@ public enum Route {
 
     public Map<Game, Map<EncounterSlot, Encounter>> getEncounters() {
         return Collections.unmodifiableMap(encounters);
+    }
+
+    public boolean isBlinds() {
+        return isBlinds;
     }
 }

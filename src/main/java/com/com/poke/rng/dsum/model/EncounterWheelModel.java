@@ -7,22 +7,43 @@ import java.util.List;
 
 public class EncounterWheelModel {
 
-    public static final double CYCLE_NS = 6_200_900_000.0;
+    // GameBoy's native frame rate.
+    private static final double FRAME_RATE = 59.7275;
+    // Average number of frames for one DSum cycle out of battle (counting down).
+    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 375.04;
+    // Average number of frames for one DSum cycle in battle (counting up).
+    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.836735;
+
+    private static final double OUT_OF_BATTLE_DSUM_CYCLE_FRAMES_STDDEV = 5.67631976;
+    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES_STDDEV = 17.3881508;
+
+    // Number of frames which the in-battle DSum cycle runs before the spiral battle entry animation ends.
+    private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 100;
+    // Number of frames which the in-battle DSum cycle runs before the blinds battle entry animation ends.
+    private static final long COUNT_UP_BEFORE_BLINDS_END_FRAMES = 48;
+    // Number of frames which the in-battle DSum cycle runs after clearing 'Got away safely!'.
+    private static final double COUNT_UP_AFTER_GOT_AWAY_FRAMES = 37;
+
+    // The duration (in ns) of a single frame.
+    private static final double ONE_FRAME_NS = 1_000_000_000.0 / FRAME_RATE;
+
+    private static final double OVERWORLD_CYCLE_NS = ONE_FRAME_NS * OVERWORLD_DSUM_CYCLE_FRAMES;
+    private static final double IN_BATTLE_CYCLE_NS = ONE_FRAME_NS * IN_BATTLE_DSUM_CYCLE_FRAMES;
+
     public static final int DSUM_RANGE = 256;
-    public static final int LEAD_DSUM = 64;
-    public static final double WIPE_ANIMATION_TIME = 1.23;
-    public static final long WIPE_ANIMATION_TIME_NS = (long) (WIPE_ANIMATION_TIME * 1_000_000_000);
-    public static final double WIPE_ROTATION_COMPENSATION_DEG =
-            (WIPE_ANIMATION_TIME_NS / (CYCLE_NS * 2)) * 360.0;
     public static final double OFFSET_STEP_DEG = 3.0;
 
     private List<EncounterSlot> targetSlots;
 
-    private double angleDeg;
-    private double angleOffset;
-    private double manualAngleOffsetDeltaDeg;
-    private int lastDSum;
-    private long spacePressedNanos;
+    private boolean isBlinds = false;
+
+    private long overworldStartTime = System.nanoTime();
+    private long lastNow = overworldStartTime;
+    private double angleDeg = 0.0;
+    private double manualAngleOffsetDeltaDeg = 0.0;
+
+    private long battleEnterTime = -1;
+
     private EncounterSlot calibratedSlot;
     private double uncertaintyWedgeExtentDeltaDeg;
 
@@ -30,8 +51,10 @@ public class EncounterWheelModel {
 
     public EncounterWheelModel(final EncounterSlot targetSlot) {
         this.targetSlots = List.of(targetSlot);
-        this.lastDSum = -1;
-        this.spacePressedNanos = -1;
+    }
+
+    public void setIsBlinds(final boolean isBlinds) {
+        this.isBlinds = isBlinds;
     }
 
     private static double angleFromDsum(final int dsum) {
@@ -62,80 +85,77 @@ public class EncounterWheelModel {
     }
 
     public void update(final long now) {
-        if (spacePressedNanos != -1) {
-            final long timeSinceSpace = now - spacePressedNanos;
-            final double elapsedAtSpace = (spacePressedNanos % CYCLE_NS) / CYCLE_NS;
-            final double angleAtSpace = -(elapsedAtSpace * 360.0) + angleOffset + manualAngleOffsetDeltaDeg;
-            final double angleChangeSinceSpace = (timeSinceSpace / (CYCLE_NS * 2.0)) * 360.0;
-            angleDeg = angleAtSpace + angleChangeSinceSpace;
+        final long delta = now - lastNow;
+        if (battleEnterTime != -1) {
+            // Running backwards
+            angleDeg += ((delta / IN_BATTLE_CYCLE_NS) * 360.0) + manualAngleOffsetDeltaDeg;
             uncertaintyWedgeExtentDeltaDeg = 0;
+            lastNow = now;
             return;
         }
 
-        final double elapsed = (now % CYCLE_NS);
-        angleDeg = -(elapsed / CYCLE_NS) * 360.0 + angleOffset + manualAngleOffsetDeltaDeg;
+        angleDeg += -(delta / OVERWORLD_CYCLE_NS) * 360.0 + manualAngleOffsetDeltaDeg;
         uncertaintyWedgeExtentDeltaDeg += 0.01;
-
-        lastDSum =  getDsum();
+        lastNow = now;
     }
 
-    public void handleKeyPress(final KeyEvent e, final long now) {
-        if (e.getKeyCode() == KeyEvent.VK_OPEN_BRACKET) {
-            manualAngleOffsetDeltaDeg -= OFFSET_STEP_DEG;
-            return;
-        }
-        if (e.getKeyCode() == KeyEvent.VK_CLOSE_BRACKET) {
-            manualAngleOffsetDeltaDeg += OFFSET_STEP_DEG;
-            return;
-        }
-        if (e.getKeyCode() == KeyEvent.VK_MINUS) {
-            uncertaintyWedgeExtentDeltaDeg -= OFFSET_STEP_DEG;
-            return;
-        }
-        if (e.getKeyCode() == KeyEvent.VK_EQUALS) {
-            uncertaintyWedgeExtentDeltaDeg += OFFSET_STEP_DEG;
-            return;
-        }
-        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-            if (spacePressedNanos != -1) {
-                double elapsed = (now % CYCLE_NS);
-                angleOffset = angleDeg + (elapsed / CYCLE_NS) * 360.0;
-                spacePressedNanos = -1;
-                return;
-            }
-            spacePressedNanos = now - WIPE_ANIMATION_TIME_NS;
+    public void battleStart() {
+        final long now = System.nanoTime();
+
+        long animationFrames = isBlinds ? COUNT_UP_BEFORE_BLINDS_END_FRAMES : COUNT_UP_BEFORE_SPIRAL_END_FRAMES;
+        battleEnterTime = now - (long) (animationFrames * ONE_FRAME_NS);
+        // We need to treat the angleDeg as if we've been counting up for that time too
+        // Calculate the incorrect angle which has been going down:
+        final double incorrectDownAngle = ((animationFrames * ONE_FRAME_NS) / OVERWORLD_CYCLE_NS) * 360.0;
+        final double correctUpAngle = ((animationFrames * ONE_FRAME_NS) / IN_BATTLE_CYCLE_NS) * 360.0;
+
+        overworldStartTime = now;
+        angleDeg = angleDeg + (correctUpAngle + incorrectDownAngle);
+    }
+
+    public void calibrateSlot(final int givenSlot) {
+
+        if (battleEnterTime == -1) {
             return;
         }
 
-        if (spacePressedNanos == -1) {
-            return;
-        }
-
-        if (e.getKeyChar() < '0' || e.getKeyChar() > '9') {
-            return;
-        }
-
-        int slotIndex = e.getKeyChar() == '0' ? 9 : (e.getKeyChar() - '1');
-        EncounterSlot[] slots = EncounterSlot.values();
+        final long now = System.nanoTime();
+        final int slotIndex = givenSlot - 1;
+        final EncounterSlot[] slots = EncounterSlot.values();
         if (slotIndex < 0 || slotIndex >= slots.length) {
             return;
         }
 
         final EncounterSlot slot = slots[slotIndex];
         final int midDsum = (slot.min() + slot.max()) / 2;
-        final long timeSinceSpace = now - spacePressedNanos;
-        final double angleChangeSinceSpace = (timeSinceSpace / (CYCLE_NS * 2.0)) * 360.0;
+        final long timeInBattle = now - battleEnterTime;
+        double angleChangeInBattle = (timeInBattle / IN_BATTLE_CYCLE_NS) * 360.0;
+        // We're going to start reversing immediately, but the game keeps counting up for a few frames after we clear
+        // the 'Got away safely!' message.  We account for that here with whatever this formula is...
+        // We /would/ have kept counting up for COUNT_UP_AFTER_GOT_AWAY_FRAMES, at the in battle rate.  But for that
+        // number of frames instead, we would be counting down.
+        final double correctUpAngle = ((COUNT_UP_AFTER_GOT_AWAY_FRAMES * ONE_FRAME_NS) / IN_BATTLE_CYCLE_NS) * 360.0;
+        final double incorrectDownAngle = ((COUNT_UP_AFTER_GOT_AWAY_FRAMES * ONE_FRAME_NS) / OVERWORLD_CYCLE_NS) * 360.0;
 
-        final double angleAtSpace = angleFromDsum(midDsum);
-        final double newAngle = angleAtSpace + angleChangeSinceSpace + WIPE_ROTATION_COMPENSATION_DEG;
+        angleChangeInBattle += (correctUpAngle + incorrectDownAngle);
 
-        final double elapsed = (now % CYCLE_NS);
-        angleOffset = newAngle + (elapsed / CYCLE_NS) * 360.0;
-        angleDeg = newAngle;
-        spacePressedNanos = -1;
+        final double angleAtBattleStart = angleFromDsum(midDsum);
+        final double newAngle = angleAtBattleStart + angleChangeInBattle;
+
+        angleDeg = newAngle + ((now - lastNow) / OVERWORLD_CYCLE_NS) * 360.0;
+        battleEnterTime = -1;
         calibratedSlot = slot;
         uncertaintyWedgeExtentDeltaDeg = 0;
         manualAngleOffsetDeltaDeg = 0;
+    }
+
+
+    public void manualAngle(final boolean positive) {
+        manualAngleOffsetDeltaDeg += positive ? OFFSET_STEP_DEG : -OFFSET_STEP_DEG;
+    }
+
+    public void uncertaintyDelta(final boolean positive) {
+        uncertaintyWedgeExtentDeltaDeg += positive ? OFFSET_STEP_DEG : -OFFSET_STEP_DEG;
     }
 
     public boolean consumeWarningBeep() {
@@ -145,7 +165,7 @@ public class EncounterWheelModel {
     }
 
     public boolean isCalibrating() {
-        return spacePressedNanos != -1;
+        return battleEnterTime != -1;
     }
 
     public boolean targetOverlapsUncertainty() {

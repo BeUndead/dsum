@@ -24,11 +24,17 @@ public final class ApplicationFrame extends JFrame {
 
         final SlotsDisplayPanel slotsDisplayPanel = new SlotsDisplayPanel(initialGame, initialRoute, initialTarget, model::setTargetSlots);
         final SlotsSelectorPanel slotsSelectorPanel = new SlotsSelectorPanel(
-                initialGame, initialRoute, slotsDisplayPanel::setGame, slotsDisplayPanel::setRoute);
+                initialGame, initialRoute, slotsDisplayPanel::setGame,
+                newRoute -> {
+                    slotsDisplayPanel.setRoute(newRoute);
+                    model.setIsBlinds(newRoute.isBlinds());
+                });
 
         final JPanel content = new JPanel(new BorderLayout());
-        content.add(slotsDisplayPanel, BorderLayout.NORTH);
-        content.add(slotsSelectorPanel, BorderLayout.EAST);
+        final JPanel slots = new JPanel(new BorderLayout());
+        slots.add(slotsDisplayPanel, BorderLayout.SOUTH);
+        slots.add(slotsSelectorPanel, BorderLayout.NORTH);
+        content.add(slots, BorderLayout.NORTH);
         content.add(wheel, BorderLayout.CENTER);
 
         add(content);
