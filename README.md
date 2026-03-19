@@ -5,8 +5,11 @@ live while playing the game (rather than pre-calculated charts).
 
 ## Usage
 
-The video [here](https://drive.google.com/file/d/1Q7juBDOXhaetI1LQ6yf_H_A3MFWIgQsQ/view?usp=sharing) shows
-the basic usage of the application.
+There are 2 videos:
+1. Yellow (catching Pidgeotto) [here](https://drive.google.com/file/d/1z5Q3yE7RRjrLV01ZeNj4sZCCd5W_POTn/view?usp=sharing)
+2. Red (catching Scyther / Chansey) [here](https://drive.google.com/file/d/10rm5AnlR5OPHUpbm7NOsEQ2mCx04gw7C/view?usp=sharing)
+
+These show the basic use of the application.
 
 The controls are:
 
