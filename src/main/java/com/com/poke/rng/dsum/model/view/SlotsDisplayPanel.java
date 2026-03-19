@@ -52,13 +52,11 @@ public class SlotsDisplayPanel extends JPanel {
     public void setGame(final Game game) {
         this.game = game;
 
-        synchronized (tiles) {
-            this.tiles.clear();
+        this.tiles.clear();
 
-            final Map<EncounterSlot, Encounter> encounterMap = route.getEncounters().get(game);
-            for (final EncounterSlot slot : EncounterSlot.values()) {
-                tiles.add(new SlotTile(encounterMap.get(slot)));
-            }
+        final Map<EncounterSlot, Encounter> encounterMap = route.getEncounters().get(game);
+        for (final EncounterSlot slot : EncounterSlot.values()) {
+            tiles.add(new SlotTile(encounterMap.get(slot)));
         }
         SwingUtilities.invokeLater(this::repaint);
     }
@@ -66,13 +64,11 @@ public class SlotsDisplayPanel extends JPanel {
     public void setRoute(final Route route) {
         this.route = route;
 
-        synchronized (tiles) {
-            this.tiles.clear();
+        this.tiles.clear();
 
-            final Map<EncounterSlot, Encounter> encounterMap = route.getEncounters().get(game);
-            for (final EncounterSlot slot : EncounterSlot.values()) {
-                tiles.add(new SlotTile(encounterMap.get(slot)));
-            }
+        final Map<EncounterSlot, Encounter> encounterMap = route.getEncounters().get(game);
+        for (final EncounterSlot slot : EncounterSlot.values()) {
+            tiles.add(new SlotTile(encounterMap.get(slot)));
         }
         SwingUtilities.invokeLater(this::repaint);
     }
@@ -82,10 +78,7 @@ public class SlotsDisplayPanel extends JPanel {
     public void paintComponent(final Graphics g) {
         super.paintComponent(g);
         this.setBackground(Color.WHITE);
-        final List<SlotTile> localTiles;
-        synchronized (tiles) {
-            localTiles = new ArrayList<>(tiles);
-        }
+        final List<SlotTile> localTiles = new ArrayList<>(tiles);
         for (int i = 0; i < localTiles.size(); i++) {
             drawTile(i, localTiles.get(i), g);
         }

@@ -38,7 +38,7 @@ public final class EncounterWheel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(final MouseEvent e) {
-                SwingUtilities.invokeLater(() -> requestFocus());
+                SwingUtilities.invokeLater(() -> requestFocusInWindow());
             }
         });
     }
@@ -102,6 +102,7 @@ public final class EncounterWheel extends JPanel {
 
         drawUncertaintyWedge(g2, cx, cy);
         drawArrow(g2, cx, cy);
+        drawCentreText(g2);
     }
 
     private void drawSlots(final Graphics2D g, final int cx, final int cy) {
@@ -200,5 +201,25 @@ public final class EncounterWheel extends JPanel {
         }
 
         return area;
+    }
+
+    private void drawCentreText(final Graphics2D g) {
+        final int cx = getWidth() / 2;
+        final int cy = getHeight() / 2;
+
+        final String message = "DSum: ~" + model.getDsum();
+
+        g.setFont(g.getFont().deriveFont(Font.BOLD, 24f));
+        final FontMetrics metrics = g.getFontMetrics();
+        final int textWidth = metrics.stringWidth(message);
+        final int textHeight = metrics.getHeight();
+
+        final int x = cx - textWidth / 2;
+        final int y = cy + textHeight / 2;
+
+        g.setColor(Color.WHITE);
+        g.fillRect(x, y - textHeight + 8, textWidth, textHeight);
+        g.setColor(Color.RED);
+        g.drawString(message, x, y);
     }
 }
