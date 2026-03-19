@@ -10,22 +10,33 @@ import java.util.function.Function;
 
 public final class SlotsSelectorPanel extends JPanel {
 
+    private final JCheckBox pikachu = new JCheckBox("Pikachu Lead?");
     private final JComboBox<Game> gameCombo = new JComboBox<>(Game.values());
     private final JComboBox<Route> routesCombo = new JComboBox<>(Route.values());
 
     public SlotsSelectorPanel(
             final Game game,
             final Route route,
+            final boolean defaultPika,
             final Consumer<Game> onGameChanged,
-            final Consumer<Route> onRouteChanged) {
+            final Consumer<Route> onRouteChanged,
+            final Consumer<Boolean> onPikachuChanged) {
         gameCombo.setSelectedItem(game);
         gameCombo.setRenderer(new RenamingListCellRenderer<>(Enum::name));
-        gameCombo.addActionListener(e -> onGameChanged.accept((Game) gameCombo.getSelectedItem()));
+        gameCombo.addActionListener(e -> {
+            final Game newGame = (Game) gameCombo.getSelectedItem();
+            onGameChanged.accept(newGame);
+            pikachu.setVisible(newGame == Game.YELLOW);
+        });
 
         routesCombo.setSelectedItem(route);
         routesCombo.setRenderer(new RenamingListCellRenderer<>(r -> " " + r.name().replace("_",  " ")));
         routesCombo.addActionListener(e -> onRouteChanged.accept((Route) routesCombo.getSelectedItem()));
 
+        pikachu.setVisible(game == Game.YELLOW);
+        pikachu.setSelected(defaultPika);
+        pikachu.addActionListener(e -> onPikachuChanged.accept(pikachu.isSelected()));
+        add(pikachu);
         add(gameCombo);
         add(routesCombo);
     }

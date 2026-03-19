@@ -19,7 +19,18 @@ public enum Route {
             of(Pidgey, 3),
             of(Rattata, 4),
             of(Pidgey, 4),
-            of(Pidgey, 5)
+            of(Pidgey, 5),
+
+            of(Pidgey, 3),
+            of(Pidgey, 4),
+            of(Rattata, 2),
+            of(Rattata, 3),
+            of(Pidgey, 2),
+            of(Pidgey, 3),
+            of(Pidgey, 5),
+            of(Rattata, 4),
+            of(Pidgey, 6),
+            of(Pidgey, 7)
     ),
     ROUTE_2(
             of(Rattata, 3),
@@ -42,7 +53,18 @@ public enum Route {
             of(Rattata, 2),
             of(Rattata, 5),
             of(Weedle, 4),
-            of(Weedle, 5)
+            of(Weedle, 5),
+
+            of(Rattata, 3),
+            of(Pidgey, 3),
+            of(Rattata, 4),
+            of(NidoranM, 4),
+            of(NidoranF, 4),
+            of(Pidgey, 5),
+            of(NidoranM, 6),
+            of(NidoranF, 6),
+            of(Pidgey, 7),
+            of(Pidgey, 7)
     ),
     ROUTE_3(
             of(Pidgey, 6),
@@ -54,7 +76,18 @@ public enum Route {
             of(Spearow, 8),
             of(Jigglypuff, 3),
             of(Jigglypuff, 5),
-            of(Jigglypuff, 7)
+            of(Jigglypuff, 7),
+
+            of(Spearow, 8),
+            of(Spearow, 9),
+            of(Mankey, 9),
+            of(Spearow, 10),
+            of(Sandshrew, 8),
+            of(Rattata, 10),
+            of(Sandshrew, 10),
+            of(Rattata, 12),
+            of(Spearow, 11),
+            of(Spearow, 12)
     ),
     ROUTE_4(
             of(Rattata, 10),
@@ -77,7 +110,18 @@ public enum Route {
             of(Rattata, 12),
             of(Spearow, 12),
             of(Ekans, 8),
-            of(Ekans, 12)
+            of(Ekans, 12),
+
+            of(Spearow, 8),
+            of(Spearow, 9),
+            of(Mankey, 9),
+            of(Spearow, 10),
+            of(Sandshrew, 8),
+            of(Rattata, 10),
+            of(Sandshrew, 10),
+            of(Rattata, 12),
+            of(Spearow, 11),
+            of(Spearow, 12)
     ),
     ROUTE_5(
             of(Bellsprout, 13),
@@ -100,7 +144,18 @@ public enum Route {
             of(Oddish, 16),
             of(Pidgey, 16),
             of(Mankey, 14),
-            of(Mankey, 16)
+            of(Mankey, 16),
+
+            of(Pidgey, 15),
+            of(Rattata, 14),
+            of(Abra, 7),
+            of(Pidgey, 16),
+            of(Rattata, 16),
+            of(Pidgey, 17),
+            of(Pidgeotto, 17),
+            of(Jigglypuff, 3),
+            of(Jigglypuff, 5),
+            of(Jigglypuff, 7)
     ),
     ROUTE_6(
             of(Bellsprout, 13),
@@ -123,7 +178,18 @@ public enum Route {
             of(Oddish, 16),
             of(Pidgey, 16),
             of(Mankey, 14),
-            of(Mankey, 16)
+            of(Mankey, 16),
+
+            of(Pidgey, 15),
+            of(Rattata, 14),
+            of(Abra, 7),
+            of(Pidgey, 16),
+            of(Rattata, 16),
+            of(Pidgey, 17),
+            of(Pidgeotto, 17),
+            of(Jigglypuff, 3),
+            of(Jigglypuff, 5),
+            of(Jigglypuff, 7)
     ),
     ROUTE_7(
             of(Pidgey, 19),
@@ -146,7 +212,18 @@ public enum Route {
             of(Growlithe, 18),
             of(Growlithe, 20),
             of(Mankey, 19),
-            of(Mankey, 20)
+            of(Mankey, 20),
+
+            of(Pidgey, 20),
+            of(Pidgey, 22),
+            of(Rattata, 20),
+            of(Abra, 15),
+            of(Abra, 19),
+            of(Pidgeotto, 24),
+            of(Abra, 26),
+            of(Jigglypuff, 19),
+            of(Jigglypuff, 24),
+            of(Jigglypuff, 24)
     ),
     ROUTE_8(
             of(Pidgey, 18),
@@ -169,7 +246,18 @@ public enum Route {
             of(Ekans, 19),
             of(Growlithe, 17),
             of(Growlithe, 15),
-            of(Growlithe, 18)
+            of(Growlithe, 18),
+
+            of(Pidgey, 20),
+            of(Pidgey, 22),
+            of(Rattata, 20),
+            of(Abra, 15),
+            of(Abra, 19),
+            of(Pidgeotto, 24),
+            of(Jigglypuff, 19),
+            of(Jigglypuff, 24),
+            of(Kadabra, 20),
+            of(Kadabra, 27)
     ),
     ROUTE_9(
             of(Rattata, 16),
@@ -192,7 +280,18 @@ public enum Route {
             of(Rattata, 17),
             of(Spearow, 17),
             of(Ekans, 13),
-            of(Ekans, 17)
+            of(Ekans, 17),
+
+            of(NidoranM, 16),
+            of(NidoranF, 16),
+            of(Rattata, 18),
+            of(NidoranM, 18),
+            of(NidoranF, 18),
+            of(Spearow, 17),
+            of(Nidorino, 18),
+            of(Nidorina, 18),
+            of(Raticate, 20),
+            of(Fearow, 19)
     ),
     ROUTE_10(
             of(Voltorb, 16),
@@ -215,7 +314,18 @@ public enum Route {
             of(Voltorb, 17),
             of(Spearow, 17),
             of(Ekans, 13),
-            of(Ekans, 17)
+            of(Ekans, 17),
+
+            of(Magnemite, 16),
+            of(Rattata, 18),
+            of(Magnemite, 18),
+            of(Magnemite, 20),
+            of(NidoranM, 17),
+            of(NidoranF, 17),
+            of(Magnemite, 22),
+            of(Raticate, 20),
+            of(Machop, 16),
+            of(Machop, 18)
     ),
     ROUTE_11(
             of(Sandshrew, 14),
@@ -238,7 +348,18 @@ public enum Route {
             of(Ekans, 15),
             of(Spearow, 17),
             of(Drowzee, 11),
-            of(Drowzee, 15)
+            of(Drowzee, 15),
+
+            of(Pidgey, 16),
+            of(Rattata, 15),
+            of(Pidgey, 18),
+            of(Drowzee, 15),
+            of(Rattata, 17),
+            of(Drowzee, 17),
+            of(Pidgeotto, 18),
+            of(Pidgeotto, 20),
+            of(Drowzee, 19),
+            of(Raticate, 17)
     ),
     ROUTE_12(
             of(Bellsprout, 24),
@@ -261,7 +382,18 @@ public enum Route {
             of(Oddish, 26),
             of(Pidgey, 27),
             of(Gloom, 28),
-            of(Gloom, 30)
+            of(Gloom, 30),
+
+            of(Oddish, 25),
+            of(Bellsprout, 25),
+            of(Pidgey, 28),
+            of(Pidgeotto, 28),
+            of(Oddish, 27),
+            of(Bellsprout, 27),
+            of(Gloom, 29),
+            of(Weepinbell, 29),
+            of(Farfetchd, 26),
+            of(Farfetchd, 31)
     ),
     ROUTE_13(
             of(Bellsprout, 24),
@@ -284,7 +416,18 @@ public enum Route {
             of(Oddish, 26),
             of(Ditto, 25),
             of(Gloom, 28),
-            of(Gloom, 30)
+            of(Gloom, 30),
+
+            of(Oddish, 25),
+            of(Bellsprout, 25),
+            of(Pidgeotto, 28),
+            of(Pidgey, 28),
+            of(Oddish, 27),
+            of(Bellsprout, 27),
+            of(Gloom, 29),
+            of(Weepinbell, 29),
+            of(Farfetchd, 26),
+            of(Farfetchd, 31)
     ),
     ROUTE_14(
             of(Bellsprout, 24),
@@ -307,7 +450,18 @@ public enum Route {
             of(Oddish, 26),
             of(Gloom, 30),
             of(Pidgeotto, 28),
-            of(Pidgeotto, 30)
+            of(Pidgeotto, 30),
+
+            of(Oddish, 26),
+            of(Bellsprout, 26),
+            of(Venonat, 24),
+            of(Pidgeotto, 30),
+            of(Oddish, 28),
+            of(Bellsprout, 28),
+            of(Gloom, 30),
+            of(Weepinbell, 30),
+            of(Venonat, 27),
+            of(Venomoth, 30)
     ),
     ROUTE_15(
             of(Bellsprout, 24),
@@ -330,7 +484,18 @@ public enum Route {
             of(Oddish, 26),
             of(Gloom, 30),
             of(Pidgeotto, 28),
-            of(Pidgeotto, 30)
+            of(Pidgeotto, 30),
+
+            of(Oddish, 26),
+            of(Bellsprout, 26),
+            of(Venonat, 24),
+            of(Pidgeotto, 30),
+            of(Oddish, 28),
+            of(Bellsprout, 28),
+            of(Gloom, 30),
+            of(Weepinbell, 30),
+            of(Venonat, 27),
+            of(Venomoth, 30)
     ),
     ROUTE_16(
             of(Spearow, 20),
@@ -342,7 +507,18 @@ public enum Route {
             of(Doduo, 22),
             of(Rattata, 22),
             of(Raticate, 23),
-            of(Raticate, 25)
+            of(Raticate, 25),
+
+            of(Spearow, 22),
+            of(Doduo, 22),
+            of(Rattata, 23),
+            of(Doduo, 24),
+            of(Rattata, 24),
+            of(Doduo, 26),
+            of(Spearow, 23),
+            of(Fearow, 24),
+            of(Raticate, 25),
+            of(Raticate, 26)
     ),
     ROUTE_17(
             of(Spearow, 20),
@@ -354,7 +530,18 @@ public enum Route {
             of(Doduo, 28),
             of(Raticate, 29),
             of(Fearow, 25),
-            of(Fearow, 27)
+            of(Fearow, 27),
+
+            of(Doduo, 26),
+            of(Fearow, 27),
+            of(Doduo, 27),
+            of(Doduo, 28),
+            of(Ponyta, 28),
+            of(Ponyta, 30),
+            of(Fearow, 29),
+            of(Doduo, 28),
+            of(Ponyta, 32),
+            of(Dodrio, 29)
     ),
     ROUTE_18(
             of(Spearow, 20),
@@ -366,7 +553,18 @@ public enum Route {
             of(Doduo, 28),
             of(Raticate, 29),
             of(Fearow, 27),
-            of(Fearow, 29)
+            of(Fearow, 29),
+
+            of(Spearow, 22),
+            of(Doduo, 22),
+            of(Rattata, 23),
+            of(Doduo, 24),
+            of(Rattata, 24),
+            of(Doduo, 26),
+            of(Spearow, 23),
+            of(Fearow, 24),
+            of(Raticate, 25),
+            of(Raticate, 26)
     ),
     //    ROUTE_19(
     //            of(Tentacool, 5),
@@ -402,7 +600,18 @@ public enum Route {
             of(Pidgeotto, 32),
             of(Tangela, 28),
             of(Tangela, 30),
-            of(Tangela, 32)
+            of(Tangela, 32),
+
+            of(Pidgey, 15),
+            of(Rattata, 13),
+            of(Pidgey, 13),
+            of(Pidgey, 11),
+            of(Pidgey, 17),
+            of(Rattata, 15),
+            of(Raticate, 15),
+            of(Pidgeotto, 17),
+            of(Pidgeotto, 19),
+            of(Pidgeotto, 15)
     ),
     ROUTE_22(
             of(Rattata, 3),
@@ -425,7 +634,18 @@ public enum Route {
             of(Spearow, 3),
             of(Spearow, 5),
             of(NidoranF, 3),
-            of(NidoranF, 4)
+            of(NidoranF, 4),
+
+            of(NidoranM, 2),
+            of(NidoranF, 2),
+            of(Mankey, 3),
+            of(Rattata, 3),
+            of(NidoranM, 4),
+            of(NidoranF, 4),
+            of(Mankey, 5),
+            of(Spearow, 2),
+            of(Spearow, 4),
+            of(Spearow, 6)
     ),
     ROUTE_23(
             of(Ekans, 26),
@@ -448,7 +668,18 @@ public enum Route {
             of(Arbok, 41),
             of(Ditto, 43),
             of(Fearow, 41),
-            of(Fearow, 43)
+            of(Fearow, 43),
+
+            of(Nidorino, 41),
+            of(Nidorina, 41),
+            of(Mankey, 36),
+            of(Nidorino, 44),
+            of(Nidorina, 44),
+            of(Fearow, 40),
+            of(Mankey, 41),
+            of(Fearow, 45),
+            of(Primeape, 41),
+            of(Primeape, 46)
     ),
     ROUTE_24(
             of(Caterpie, 7),
@@ -471,7 +702,18 @@ public enum Route {
             of(Oddish, 14),
             of(Pidgey, 13),
             of(Abra, 8),
-            of(Abra, 12)
+            of(Abra, 12),
+
+            of(Oddish, 12),
+            of(Bellsprout, 12),
+            of(Pidgey, 13),
+            of(Oddish, 14),
+            of(Bellsprout, 14),
+            of(Pidgey, 15),
+            of(Venonat, 13),
+            of(Venonat, 16),
+            of(Pidgey, 17),
+            of(Pidgeotto, 17)
     ),
     ROUTE_25(
             of(Caterpie, 8),
@@ -494,7 +736,18 @@ public enum Route {
             of(Oddish, 14),
             of(Abra, 10),
             of(Metapod, 7),
-            of(Caterpie, 8)
+            of(Caterpie, 8),
+
+            of(Oddish, 12),
+            of(Bellsprout, 12),
+            of(Pidgey, 13),
+            of(Oddish, 14),
+            of(Bellsprout, 14),
+            of(Pidgey, 15),
+            of(Venonat, 13),
+            of(Venonat, 16),
+            of(Pidgey, 17),
+            of(Pidgeotto, 17)
     ),
     VIRIDIAN_FOREST(true,
             of(Caterpie, 4),
@@ -517,7 +770,18 @@ public enum Route {
             of(Metapod, 4),
             of(Caterpie, 3),
             of(Pikachu, 3),
-            of(Pikachu, 5)
+            of(Pikachu, 5),
+
+            of(Caterpie, 3),
+            of(Metapod, 4),
+            of(Caterpie, 4),
+            of(Caterpie, 5),
+            of(Pidgey, 4),
+            of(Pidgey, 6),
+            of(Caterpie, 6),
+            of(Metapod, 6),
+            of(Pidgey, 8),
+            of(Pidgeotto, 9)
     ),
     MT_MOON_1F(true,
             of(Zubat, 8),
@@ -529,7 +793,18 @@ public enum Route {
             of(Geodude, 10),
             of(Paras, 8),
             of(Zubat, 11),
-            of(Clefairy, 8)
+            of(Clefairy, 8),
+
+            of(Zubat, 8),
+            of(Zubat, 9),
+            of(Geodude, 10),
+            of(Zubat, 6),
+            of(Zubat, 7),
+            of(Zubat, 10),
+            of(Geodude, 10),
+            of(Zubat, 11),
+            of(Sandshrew, 12),
+            of(Clefairy, 11)
     ),
     MT_MOON_B1F(true,
             of(Zubat, 8),
@@ -541,7 +816,18 @@ public enum Route {
             of(Zubat, 10),
             of(Zubat, 11),
             of(Clefairy, 9),
-            of(Geodude, 9)
+            of(Geodude, 9),
+
+            of(Zubat, 8),
+            of(Zubat, 9),
+            of(Zubat, 10),
+            of(Geodude, 10),
+            of(Geodude, 11),
+            of(Zubat, 11),
+            of(Paras, 9),
+            of(Paras, 11),
+            of(Clefairy, 10),
+            of(Clefairy, 12)
     ),
     MT_MOON_B2F(true,
             of(Zubat, 9),
@@ -553,9 +839,31 @@ public enum Route {
             of(Paras, 12),
             of(Clefairy, 10),
             of(Zubat, 12),
-            of(Clefairy, 12)
+            of(Clefairy, 12),
+
+            of(Zubat, 10),
+            of(Geodude, 11),
+            of(Paras, 13),
+            of(Zubat, 11),
+            of(Zubat, 11),
+            of(Zubat, 12),
+            of(Zubat, 13),
+            of(Clefairy, 9),
+            of(Clefairy, 11),
+            of(Clefairy, 13)
     ),
     DIGLETTS_CAVE(
+            of(Diglett, 18),
+            of(Diglett, 19),
+            of(Diglett, 17),
+            of(Diglett, 20),
+            of(Diglett, 16),
+            of(Diglett, 15),
+            of(Diglett, 21),
+            of(Diglett, 22),
+            of(Dugtrio, 29),
+            of(Dugtrio, 31),
+
             of(Diglett, 18),
             of(Diglett, 19),
             of(Diglett, 17),
@@ -577,7 +885,18 @@ public enum Route {
             of(Zubat, 15),
             of(Machop, 17),
             of(Onix, 13),
-            of(Onix, 15)
+            of(Onix, 15),
+
+            of(Zubat, 15),
+            of(Geodude, 16),
+            of(Zubat, 17),
+            of(Zubat, 19),
+            of(Geodude, 18),
+            of(Geodude, 20),
+            of(Zubat, 21),
+            of(Machop, 17),
+            of(Machop, 19),
+            of(Machop, 21)
     ),
     ROCK_TUNNEL_B1F(true,
             of(Zubat, 16),
@@ -589,7 +908,18 @@ public enum Route {
             of(Machop, 17),
             of(Onix, 17),
             of(Onix, 13),
-            of(Geodude, 18)
+            of(Geodude, 18),
+
+            of(Zubat, 20),
+            of(Geodude, 17),
+            of(Machop, 18),
+            of(Zubat, 21),
+            of(Zubat, 22),
+            of(Geodude, 21),
+            of(Machop, 20),
+            of(Onix, 14),
+            of(Onix, 18),
+            of(Onix, 22)
     ),
     POKEMON_TOWER_3F(true,
             of(Gastly, 20),
@@ -601,6 +931,17 @@ public enum Route {
             of(Gastly, 24),
             of(Cubone, 20),
             of(Cubone, 22),
+            of(Haunter, 25),
+
+            of(Gastly, 20),
+            of(Gastly, 21),
+            of(Gastly, 22),
+            of(Gastly, 23),
+            of(Gastly, 24),
+            of(Gastly, 19),
+            of(Gastly, 18),
+            of(Gastly, 25),
+            of(Haunter, 20),
             of(Haunter, 25)
     ),
     POKEMON_TOWER_4F(true,
@@ -613,7 +954,18 @@ public enum Route {
             of(Haunter, 25),
             of(Cubone, 20),
             of(Cubone, 22),
-            of(Gastly, 24)
+            of(Gastly, 24),
+
+            of(Gastly, 20),
+            of(Gastly, 21),
+            of(Gastly, 22),
+            of(Gastly, 23),
+            of(Gastly, 24),
+            of(Gastly, 19),
+            of(Gastly, 18),
+            of(Gastly, 25),
+            of(Haunter, 20),
+            of(Haunter, 25)
     ),
     POKEMON_TOWER_5F(true,
             of(Gastly, 20),
@@ -625,7 +977,18 @@ public enum Route {
             of(Haunter, 25),
             of(Cubone, 20),
             of(Cubone, 22),
-            of(Gastly, 24)
+            of(Gastly, 24),
+
+            of(Gastly, 22),
+            of(Gastly, 23),
+            of(Gastly, 24),
+            of(Gastly, 25),
+            of(Gastly, 26),
+            of(Gastly, 21),
+            of(Cubone, 20),
+            of(Gastly, 27),
+            of(Haunter, 22),
+            of(Haunter, 27)
     ),
     POKEMON_TOWER_6F(true,
             of(Gastly, 21),
@@ -637,7 +1000,18 @@ public enum Route {
             of(Haunter, 26),
             of(Cubone, 22),
             of(Cubone, 24),
-            of(Haunter, 28)
+            of(Haunter, 28),
+
+            of(Gastly, 22),
+            of(Gastly, 23),
+            of(Gastly, 24),
+            of(Gastly, 25),
+            of(Gastly, 26),
+            of(Gastly, 21),
+            of(Cubone, 20),
+            of(Gastly, 27),
+            of(Haunter, 22),
+            of(Haunter, 27)
     ),
     POKEMON_TOWER_7F(true,
             of(Gastly, 21),
@@ -649,7 +1023,18 @@ public enum Route {
             of(Cubone, 22),
             of(Cubone, 24),
             of(Haunter, 28),
-            of(Haunter, 30)
+            of(Haunter, 30),
+
+            of(Gastly, 24),
+            of(Gastly, 25),
+            of(Gastly, 26),
+            of(Gastly, 27),
+            of(Gastly, 28),
+            of(Gastly, 23),
+            of(Cubone, 24),
+            of(Gastly, 29),
+            of(Haunter, 24),
+            of(Haunter, 29)
     ),
     SAFARI_ZONE_CENTER(true,
             of(NidoranF, 22),
@@ -672,7 +1057,18 @@ public enum Route {
             of(Nidorina, 31),
             of(Parasect, 30),
             of(Scyther, 23),
-            of(Chansey, 23)
+            of(Chansey, 23),
+
+            of(NidoranM, 14),
+            of(NidoranF, 36),
+            of(Exeggcute, 24),
+            of(Rhyhorn, 20),
+            of(Nidorino, 23),
+            of(Parasect, 27),
+            of(Paras, 27),
+            of(Parasect, 32),
+            of(Tangela, 22),
+            of(Chansey, 7)
     ),
     SAFARI_ZONE_EAST(true,
             of(NidoranF, 24),
@@ -695,7 +1091,18 @@ public enum Route {
             of(NidoranF, 24),
             of(Parasect, 25),
             of(Kangaskhan, 25),
-            of(Scyther, 28)
+            of(Scyther, 28),
+
+            of(NidoranM, 21),
+            of(NidoranF, 29),
+            of(Exeggcute, 22),
+            of(Tauros, 21),
+            of(Nidorina, 32),
+            of(Cubone, 19),
+            of(Exeggcute, 26),
+            of(Marowak, 24),
+            of(Chansey, 21),
+            of(Scyther, 15)
     ),
     SAFARI_ZONE_2(true,
             of(NidoranF, 22),
@@ -718,7 +1125,18 @@ public enum Route {
             of(Nidorina, 30),
             of(Venomoth, 32),
             of(Chansey, 26),
-            of(Tauros, 28)
+            of(Tauros, 28),
+
+            of(NidoranM, 36),
+            of(NidoranF, 14),
+            of(Exeggcute, 20),
+            of(Rhyhorn, 25),
+            of(Nidorina, 23),
+            of(Kangaskhan, 28),
+            of(Cubone, 16),
+            of(Kangaskhan, 33),
+            of(Scyther, 25),
+            of(Pinsir, 15)
     ),
     SAFARI_ZONE_3(true,
             of(NidoranF, 25),
@@ -741,7 +1159,18 @@ public enum Route {
             of(NidoranF, 25),
             of(Venomoth, 31),
             of(Tauros, 26),
-            of(Kangaskhan, 28)
+            of(Kangaskhan, 28),
+
+            of(NidoranM, 29),
+            of(NidoranF, 21),
+            of(Exeggcute, 22),
+            of(Tauros, 21),
+            of(Nidorino, 32),
+            of(Cubone, 19),
+            of(Exeggcute, 26),
+            of(Marowak, 24),
+            of(Pinsir, 25),
+            of(Tangela, 27)
     ),
     POWER_PLANT(
             of(Voltorb, 21),
@@ -764,7 +1193,18 @@ public enum Route {
             of(Magneton, 32),
             of(Magneton, 35),
             of(Electabuzz, 33),
-            of(Electabuzz, 36)
+            of(Electabuzz, 36),
+
+            of(Magnemite, 30),
+            of(Magnemite, 35),
+            of(Magneton, 33),
+            of(Voltorb, 33),
+            of(Voltorb, 37),
+            of(Grimer, 33),
+            of(Grimer, 37),
+            of(Magneton, 38),
+            of(Muk, 33),
+            of(Muk, 37)
     ),
     SEAFOAM_ISLANDS_1F(true,
             of(Seel, 30),
@@ -787,7 +1227,18 @@ public enum Route {
             of(Golbat, 29),
             of(Psyduck, 28),
             of(Shellder, 28),
-            of(Golduck, 38)
+            of(Golduck, 38),
+
+            of(Zubat, 18),
+            of(Krabby, 25),
+            of(Krabby, 27),
+            of(Zubat, 27),
+            of(Zubat, 36),
+            of(Slowpoke, 28),
+            of(Slowpoke, 30),
+            of(Zubat, 9),
+            of(Golbat, 27),
+            of(Golbat, 36)
     ),
     SEAFOAM_ISLANDS_B1F(true,
             of(Shellder, 30),
@@ -810,7 +1261,18 @@ public enum Route {
             of(Slowpoke, 30),
             of(Seel, 28),
             of(Dewgong, 38),
-            of(Seadra, 37)
+            of(Seadra, 37),
+
+            of(Zubat, 27),
+            of(Krabby, 26),
+            of(Zubat, 36),
+            of(Krabby, 28),
+            of(Golbat, 27),
+            of(Slowpoke, 29),
+            of(Zubat, 18),
+            of(Kingler, 28),
+            of(Seel, 22),
+            of(Seel, 26)
     ),
     SEAFOAM_ISLANDS_B2F(true,
             of(Seel, 30),
@@ -833,7 +1295,18 @@ public enum Route {
             of(Horsea, 30),
             of(Shellder, 28),
             of(Golbat, 30),
-            of(Slowbro, 37)
+            of(Slowbro, 37),
+
+            of(Zubat, 27),
+            of(Krabby, 27),
+            of(Zubat, 36),
+            of(Golbat, 27),
+            of(Kingler, 28),
+            of(Seel, 24),
+            of(Krabby, 29),
+            of(Golbat, 36),
+            of(Slowpoke, 31),
+            of(Slowbro, 31)
     ),
     SEAFOAM_ISLANDS_B3F(true,
             of(Psyduck, 31),
@@ -856,7 +1329,18 @@ public enum Route {
             of(Horsea, 31),
             of(Shellder, 29),
             of(Seadra, 39),
-            of(Dewgong, 37)
+            of(Dewgong, 37),
+
+            of(Golbat, 27),
+            of(Zubat, 36),
+            of(Krabby, 29),
+            of(Zubat, 27),
+            of(Kingler, 30),
+            of(Seel, 26),
+            of(Krabby, 31),
+            of(Seel, 30),
+            of(Dewgong, 28),
+            of(Dewgong, 32)
     ),
     SEAFOAM_ISLANDS_B4F(true,
             of(Krabby, 31),
@@ -879,7 +1363,18 @@ public enum Route {
             of(Slowpoke, 31),
             of(Seel, 29),
             of(Slowbro, 39),
-            of(Golbat, 32)
+            of(Golbat, 32),
+
+            of(Golbat, 36),
+            of(Zubat, 36),
+            of(Krabby, 30),
+            of(Kingler, 32),
+            of(Seel, 28),
+            of(Seel, 32),
+            of(Golbat, 27),
+            of(Zubat, 45),
+            of(Dewgong, 30),
+            of(Dewgong, 34)
     ),
     POKEMON_MANSION_1F(
             of(Grimer, 32),
@@ -902,7 +1397,18 @@ public enum Route {
             of(Grimer, 30),
             of(Ponyta, 28),
             of(Weezing, 37),
-            of(Muk, 39)
+            of(Muk, 39),
+
+            of(Rattata, 34),
+            of(Raticate, 34),
+            of(Grimer, 23),
+            of(Growlithe, 26),
+            of(Rattata, 37),
+            of(Raticate, 37),
+            of(Growlithe, 30),
+            of(Grimer, 26),
+            of(Growlithe, 34),
+            of(Growlithe, 38)
     ),
     POKEMON_MANSION_2F(
             of(Vulpix, 32),
@@ -925,7 +1431,18 @@ public enum Route {
             of(Grimer, 30),
             of(Ponyta, 28),
             of(Weezing, 39),
-            of(Muk, 37)
+            of(Muk, 37),
+
+            of(Rattata, 37),
+            of(Raticate, 37),
+            of(Grimer, 26),
+            of(Grimer, 29),
+            of(Rattata, 40),
+            of(Raticate, 40),
+            of(Grimer, 32),
+            of(Grimer, 35),
+            of(Muk, 35),
+            of(Muk, 38)
     ),
     POKEMON_MANSION_3F(
             of(Grimer, 31),
@@ -948,7 +1465,18 @@ public enum Route {
             of(Grimer, 34),
             of(Weezing, 38),
             of(Ponyta, 36),
-            of(Muk, 42)
+            of(Muk, 42),
+
+            of(Rattata, 40),
+            of(Raticate, 40),
+            of(Grimer, 32),
+            of(Grimer, 35),
+            of(Rattata, 43),
+            of(Raticate, 43),
+            of(Grimer, 38),
+            of(Grimer, 38),
+            of(Muk, 38),
+            of(Muk, 41)
     ),
     POKEMON_MANSION_B1F(
             of(Grimer, 33),
@@ -971,7 +1499,18 @@ public enum Route {
             of(Ponyta, 34),
             of(Grimer, 35),
             of(Weezing, 38),
-            of(Muk, 42)
+            of(Muk, 42),
+
+            of(Grimer, 35),
+            of(Grimer, 38),
+            of(Raticate, 37),
+            of(Raticate, 40),
+            of(Muk, 41),
+            of(Raticate, 43),
+            of(Ditto, 24),
+            of(Raticate, 46),
+            of(Ditto, 18),
+            of(Ditto, 12)
     ),
     VICTORY_ROAD_1F(
             of(Machop, 24),
@@ -983,7 +1522,18 @@ public enum Route {
             of(Graveler, 41),
             of(Golbat, 41),
             of(Machoke, 42),
-            of(Marowak, 43)
+            of(Marowak, 43),
+
+            of(Geodude, 26),
+            of(Geodude, 31),
+            of(Geodude, 36),
+            of(Zubat, 39),
+            of(Zubat, 44),
+            of(Geodude, 41),
+            of(Onix, 43),
+            of(Onix, 45),
+            of(Graveler, 41),
+            of(Graveler, 47)
     ),
     VICTORY_ROAD_2F(
             of(Machop, 22),
@@ -995,7 +1545,18 @@ public enum Route {
             of(Machoke, 41),
             of(Golbat, 40),
             of(Marowak, 40),
-            of(Graveler, 43)
+            of(Graveler, 43),
+
+            of(Geodude, 22),
+            of(Geodude, 24),
+            of(Geodude, 26),
+            of(Zubat, 36),
+            of(Golbat, 39),
+            of(Graveler, 42),
+            of(Onix, 41),
+            of(Onix, 40),
+            of(Machoke, 40),
+            of(Machoke, 43)
     ),
     VICTORY_ROAD_3F(
             of(Machop, 24),
@@ -1007,7 +1568,18 @@ public enum Route {
             of(Graveler, 43),
             of(Golbat, 41),
             of(Machoke, 42),
-            of(Machoke, 45)
+            of(Machoke, 45),
+
+            of(Geodude, 36),
+            of(Golbat, 44),
+            of(Geodude, 41),
+            of(Onix, 49),
+            of(Geodude, 46),
+            of(Graveler, 41),
+            of(Machoke, 42),
+            of(Machoke, 45),
+            of(Graveler, 47),
+            of(Graveler, 47)
     ),
     CERULEAN_CAVE_1F(true,
             of(Golbat, 46),
@@ -1030,7 +1602,18 @@ public enum Route {
             of(Kadabra, 49),
             of(Parasect, 52),
             of(Raichu, 53),
-            of(Ditto, 53)
+            of(Ditto, 53),
+
+            of(Golbat, 50),
+            of(Golbat, 55),
+            of(Graveler, 45),
+            of(Gloom, 55),
+            of(Weepinbell, 55),
+            of(Sandslash, 52),
+            of(Venomoth, 54),
+            of(Paras, 54),
+            of(Ditto, 55),
+            of(Ditto, 60)
     ),
     CERULEAN_CAVE_2F(true,
             of(Dodrio, 51),
@@ -1042,7 +1625,18 @@ public enum Route {
             of(Chansey, 56),
             of(Wigglytuff, 54),
             of(Ditto, 55),
-            of(Ditto, 60)
+            of(Ditto, 60),
+
+            of(Golbat, 52),
+            of(Golbat, 57),
+            of(Graveler, 50),
+            of(Sandslash, 56),
+            of(Rhyhorn, 50),
+            of(Ditto, 60),
+            of(Gloom, 58),
+            of(Weepinbell, 58),
+            of(Rhydon, 60),
+            of(Rhydon, 58)
     ),
     CERULEAN_CAVE_B1F(true,
             of(Rhydon, 55),
@@ -1065,7 +1659,18 @@ public enum Route {
             of(Arbok, 57),
             of(Ditto, 65),
             of(Ditto, 63),
-            of(Ditto, 67)
+            of(Ditto, 67),
+
+            of(Golbat, 54),
+            of(Golbat, 59),
+            of(Graveler, 55),
+            of(Rhyhorn, 52),
+            of(Rhydon, 62),
+            of(Ditto, 60),
+            of(Chansey, 56),
+            of(Ditto, 65),
+            of(Lickitung, 55),
+            of(Lickitung, 50)
     );
 
     private final Map<Game, Map<EncounterSlot, Encounter>> encounters;
@@ -1080,12 +1685,15 @@ public enum Route {
         this.encounters = new EnumMap<>(Game.class);
         final Map<EncounterSlot, Encounter> redEncounters = new EnumMap<>(EncounterSlot.class);
         final Map<EncounterSlot, Encounter> blueEncounters = new EnumMap<>(EncounterSlot.class);
-        if (encounters.length == 10) {
-            // Both games have the same slots:
-            for (int i = 0; i < encounters.length; i++) {
+        final Map<EncounterSlot, Encounter> yellowEncounters = new EnumMap<>(EncounterSlot.class);
+        final int yellowOffset;
+        if (encounters.length == 20) {
+            // Blue and Red have the same slots, in the first 10
+            for (int i = 0; i < 10; i++) {
                 redEncounters.put(EncounterSlot.values()[i], encounters[i]);
                 blueEncounters.put(EncounterSlot.values()[i], encounters[i]);
             }
+            yellowOffset = 10;
         } else {
             // Different encounter slots for each game; first 10 for blue, second 10 for red:
             for (int i = 0; i < 10; i++) {
@@ -1094,10 +1702,17 @@ public enum Route {
             for (int i = 10; i < 20; i++) {
                 redEncounters.put(EncounterSlot.values()[i - 10], encounters[i]);
             }
+            yellowOffset = 20;
+        }
+
+        // Yellow's slots are always the last 10.
+        for (int i = yellowOffset; i < encounters.length; i++) {
+            yellowEncounters.put(EncounterSlot.values()[i - yellowOffset], encounters[i]);
         }
 
         this.encounters.put(Game.BLUE, blueEncounters);
         this.encounters.put(Game.RED, redEncounters);
+        this.encounters.put(Game.YELLOW, yellowEncounters);
     }
 
     public Map<Game, Map<EncounterSlot, Encounter>> getEncounters() {
