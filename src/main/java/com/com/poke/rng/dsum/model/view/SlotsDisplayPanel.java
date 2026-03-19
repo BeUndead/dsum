@@ -12,8 +12,8 @@ import java.util.function.Consumer;
 
 public class SlotsDisplayPanel extends JPanel {
 
-    private Game game;
-    private Route route;
+    private volatile Game game;
+    private volatile Route route;
 
     private final List<JToggleButton> buttons = new ArrayList<>(10);
     private final List<SlotTile> tiles = new ArrayList<>();
@@ -21,7 +21,7 @@ public class SlotsDisplayPanel extends JPanel {
     public SlotsDisplayPanel(final Game game, final Route route, final EncounterSlot initialSlot,
                              final Consumer<List<EncounterSlot>> onTargetsChanged) {
         this.game = game;
-        setRoute(route);
+        this.route = route;
 
         setPreferredSize(new Dimension(500, 100));
 
@@ -46,30 +46,34 @@ public class SlotsDisplayPanel extends JPanel {
             buttons.add(toggle);
             add(toggle);
         }
+
+        this.update();
     }
 
 
     public void setGame(final Game game) {
         this.game = game;
 
-        this.tiles.clear();
-
-        final Map<EncounterSlot, Encounter> encounterMap = route.getEncounters().get(game);
-        for (final EncounterSlot slot : EncounterSlot.values()) {
-            tiles.add(new SlotTile(encounterMap.get(slot)));
-        }
-        SwingUtilities.invokeLater(this::repaint);
+        update();
     }
 
     public void setRoute(final Route route) {
         this.route = route;
 
+        update();
+    }
+
+    private void update() {
         this.tiles.clear();
 
         final Map<EncounterSlot, Encounter> encounterMap = route.getEncounters().get(game);
         for (final EncounterSlot slot : EncounterSlot.values()) {
             tiles.add(new SlotTile(encounterMap.get(slot)));
         }
+        for (int i = 0; i < tiles.size(); i++) {
+            updateTileIcon(i, tiles.get(i));
+        }
+
         SwingUtilities.invokeLater(this::repaint);
     }
 
@@ -78,22 +82,20 @@ public class SlotsDisplayPanel extends JPanel {
     public void paintComponent(final Graphics g) {
         super.paintComponent(g);
         this.setBackground(Color.WHITE);
-        final List<SlotTile> localTiles = new ArrayList<>(tiles);
-        for (int i = 0; i < localTiles.size(); i++) {
-            drawTile(i, localTiles.get(i), g);
-        }
     }
 
 
-    private void drawTile(final int index, final SlotTile tile, final Graphics g) {
+    private void updateTileIcon(final int index, final SlotTile tile) {
         final JToggleButton button = buttons.get(index);
 
         final TextIcon slotText = new TextIcon(button, "" + (index + 1), TextIcon.Layout.HORIZONTAL);
         slotText.setFont(slotText.getFont().deriveFont(Font.BOLD).deriveFont(18f));
         final TextIcon levelText = new TextIcon(button, "Lv. " + tile.encounter.level(), TextIcon.Layout.HORIZONTAL);
         levelText.setFont(levelText.getFont().deriveFont(13f));
+
+        final Map<Species, ImageIcon> spriteMap = SpriteStorer.sprites.get(game);
         final CompoundIcon icon = new CompoundIcon(CompoundIcon.Axis.Y_AXIS,
-                slotText, SpriteStorer.sprites.get(tile.encounter.species()), levelText);
+                slotText, spriteMap.get(tile.encounter.species()), levelText);
 
         button.setIcon(icon);
     }
@@ -106,13 +108,29 @@ public class SlotsDisplayPanel extends JPanel {
         }
     }
 
+    private record GameAndSpecies(Game game, Species species) {}
+
     private static final class SpriteStorer {
-        private static final Map<Species, ImageIcon> sprites = new EnumMap<>(Species.class);
+        private static final Map<Game, Map<Species, ImageIcon>> sprites = new EnumMap<>(Game.class);
 
         static {
+            final Map<Species, ImageIcon> red = new EnumMap<>(Species.class);
+            final Map<Species, ImageIcon> blue = new EnumMap<>(Species.class);
+            final Map<Species, ImageIcon> yellow = new EnumMap<>(Species.class);
+
             for (final Species species : Species.values()) {
-                sprites.put(species, new ImageIcon(SpriteStorer.class.getResource("/sprites/%04d.png".formatted(species.ordinal() + 1))));
+                final ImageIcon rbImage = new ImageIcon(SpriteStorer.class.getResource(
+                        "/sprites/rb/%d.png".formatted(species.ordinal() + 1)));
+                red.put(species, rbImage);
+                blue.put(species, rbImage);
+
+                yellow.put(species, new ImageIcon(SpriteStorer.class.getResource(
+                        "/sprites/y/%d.png".formatted(species.ordinal() + 1))));
             }
+
+            sprites.put(Game.RED, red);
+            sprites.put(Game.BLUE, blue);
+            sprites.put(Game.YELLOW, yellow);
         }
     }
 }

@@ -174,7 +174,7 @@ public class EncounterWheelModel {
         final int midDsum = (slot.min() + slot.max()) / 2;
         final long timeInBattle = now - battleEnterTime;
         final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
-        final double overwordNs = game == Game.YELLOW ? YELLOW_OVERWORLD_CYCLE_NS : OVERWORLD_CYCLE_NS;
+        final double overworldNs = game == Game.YELLOW ? YELLOW_OVERWORLD_CYCLE_NS : OVERWORLD_CYCLE_NS;
         double angleChangeInBattle = (timeInBattle / inBattleNs) * 360.0;
         // We're going to start reversing immediately, but the game keeps counting up for a few frames after we clear
         // the 'Got away safely!' message.  We account for that here with whatever this formula is...
@@ -183,14 +183,14 @@ public class EncounterWheelModel {
         // This results in the wheel being wrong for the COUNT_UP_AFTER_GOT_AWAY frames...  But you can't get an
         // encounter in that window anyways - and makes the maths much simpler.
         final double correctUpAngle = ((COUNT_UP_AFTER_GOT_AWAY_FRAMES * ONE_FRAME_NS) / inBattleNs) * 360.0;
-        final double incorrectDownAngle = (((COUNT_UP_AFTER_GOT_AWAY_FRAMES - 1) * ONE_FRAME_NS) / overwordNs) * 360.0;
+        final double incorrectDownAngle = (((COUNT_UP_AFTER_GOT_AWAY_FRAMES - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
 
         angleChangeInBattle += (correctUpAngle + incorrectDownAngle);
 
         final double angleAtBattleStart = angleFromDsum(midDsum);
         final double newAngle = angleAtBattleStart + angleChangeInBattle;
 
-        angleDeg = newAngle + ((now - lastNow) / overwordNs) * 360.0;
+        angleDeg = newAngle + ((now - lastNow) / overworldNs) * 360.0;
         battleEnterTime = -1;
         calibratedSlot = slot;
         uncertaintyWedgeExtentDeltaDeg = 0;
