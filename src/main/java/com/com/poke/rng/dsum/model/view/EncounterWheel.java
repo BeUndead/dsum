@@ -102,7 +102,7 @@ public final class EncounterWheel extends JPanel {
 
         drawUncertaintyWedge(g2, cx, cy);
         drawArrow(g2, cx, cy);
-        drawCentreText(g2);
+        drawText(g2);
     }
 
     private void drawSlots(final Graphics2D g, final int cx, final int cy) {
@@ -203,23 +203,23 @@ public final class EncounterWheel extends JPanel {
         return area;
     }
 
-    private void drawCentreText(final Graphics2D g) {
-        final int cx = getWidth() / 2;
-        final int cy = getHeight() / 2;
+    private void drawText(final Graphics2D g) {
+        final int mx = getWidth();
+        final int my = getHeight();
 
         final String message = "DSum: ~" + model.getDsum();
 
-        g.setFont(g.getFont().deriveFont(Font.BOLD, 24f));
+        g.setFont(g.getFont().deriveFont(Font.BOLD, 18f));
         final FontMetrics metrics = g.getFontMetrics();
         final int textWidth = metrics.stringWidth(message);
         final int textHeight = metrics.getHeight();
 
-        final int x = cx - textWidth / 2;
-        final int y = cy + textHeight / 2;
+        final int x = mx - textWidth - 10;
+        final int y = my - textHeight - 10;
 
-        g.setColor(Color.WHITE);
+        g.setColor(Color.BLACK);
         g.fillRect(x, y - textHeight + 8, textWidth, textHeight);
-        g.setColor(Color.RED);
+        g.setColor(Color.WHITE);
         g.drawString(message, x, y);
     }
 }

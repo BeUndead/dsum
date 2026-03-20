@@ -149,7 +149,7 @@ public class EncounterWheelModel {
             overworldNs = OVERWORLD_CYCLE_NS;
         }
         angleDeg += -((delta / overworldNs) * 360.0) + manualAngleOffsetDeltaDeg;
-        uncertaintyWedgeExtentDeltaDeg += 0.01;
+        uncertaintyWedgeExtentDeltaDeg += 0.02;
         manualAngleOffsetDeltaDeg = 0;
         lastNow = now;
     }
