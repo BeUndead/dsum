@@ -17,6 +17,7 @@ public final class ApplicationFrame extends JFrame {
         final Route initialRoute = Route.ROUTE_22;
         final EncounterSlot initialTarget = EncounterSlot._4;
         final boolean initialPika = true;
+        final boolean initialBike = false;
 
         final EncounterWheelModel model = new EncounterWheelModel(initialTarget, initialGame);
         final EncounterWheel wheel = new EncounterWheel(model);
@@ -26,7 +27,7 @@ public final class ApplicationFrame extends JFrame {
         final EncounterWheelController controller =
                 new EncounterWheelController(model, wheel, new OverlapHumPlayer(), slotsDisplayPanel::setLikelySlot);
         final SlotsSelectorPanel slotsSelectorPanel = new SlotsSelectorPanel(
-                initialGame, initialRoute, initialPika,
+                initialGame, initialRoute, initialPika, initialBike,
                 game -> {
                     slotsDisplayPanel.setGame(game);
                     model.setGame(game);
@@ -35,7 +36,8 @@ public final class ApplicationFrame extends JFrame {
                     slotsDisplayPanel.setRoute(newRoute);
                     model.setIsBlinds(newRoute.isBlinds());
                 },
-                model::setSkipPikaCry);
+                model::setPikaLead,
+                model::setOnBike);
 
         final JPanel content = new JPanel(new BorderLayout());
         final JPanel slots = new JPanel(new BorderLayout());

@@ -3,9 +3,7 @@ package com.com.poke.rng.dsum.model;
 import com.com.poke.rng.dsum.constants.EncounterSlot;
 import com.com.poke.rng.dsum.constants.Game;
 
-import java.awt.event.KeyEvent;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class EncounterWheelModel {
 
@@ -27,7 +25,10 @@ public class EncounterWheelModel {
 
     // Yellow:
     // Average number of frames for one DSum cycle out of battle (counting up - hence minus).
-    private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES = -809.510204;
+    private static final double YELLOW_OVERWORLD_ON_BIKE_FRAMES = -693.958333;
+    private static final double YELLOW_OVERWORLD_PIKACHU_FOLLOW_FRAMES = -825.1739413;
+
+    private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES = -853.510204;
     // Average number of frames for one DSum cycle in battle (counting up).
     private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 775.944444;
 
@@ -38,6 +39,9 @@ public class EncounterWheelModel {
 
     private static final double OVERWORLD_CYCLE_NS = ONE_FRAME_NS * OVERWORLD_DSUM_CYCLE_FRAMES;
     private static final double YELLOW_OVERWORLD_CYCLE_NS = ONE_FRAME_NS * YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES;
+    private static final double YELLOW_OVERWORLD_ON_BIKE_CYCLE_NS = ONE_FRAME_NS * YELLOW_OVERWORLD_ON_BIKE_FRAMES;
+    private static final double YELLOW_OVERWORLD_PIKACHU_FOLLOW_CYCLE_NS
+            = ONE_FRAME_NS * YELLOW_OVERWORLD_PIKACHU_FOLLOW_FRAMES;
     private static final double IN_BATTLE_CYCLE_NS = ONE_FRAME_NS * IN_BATTLE_DSUM_CYCLE_FRAMES;
     private static final double YELLOW_IN_BATTLE_CYCLE_NS = ONE_FRAME_NS * YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES;
 
@@ -63,7 +67,8 @@ public class EncounterWheelModel {
 
     private boolean warningBeepPending;
 
-    private boolean skipPikaCry = true;
+    private boolean pikaLead = true;
+    private boolean bike = false;
 
     private Game game;
 
@@ -80,8 +85,12 @@ public class EncounterWheelModel {
         this.game = game;
     }
 
-    public void setSkipPikaCry(final boolean skip) {
-        this.skipPikaCry = skip;
+    public void setPikaLead(final boolean skip) {
+        this.pikaLead = skip;
+    }
+
+    public void setOnBike(final boolean bike) {
+        this.bike = bike;
     }
 
     private static double angleFromDsum(final int dsum) {
@@ -125,7 +134,19 @@ public class EncounterWheelModel {
             return;
         }
 
-        final double overworldNs = game == Game.YELLOW ? YELLOW_OVERWORLD_CYCLE_NS : OVERWORLD_CYCLE_NS;
+        final double overworldNs;
+        if (game == Game.YELLOW) {
+            if (bike) {
+                overworldNs = YELLOW_OVERWORLD_ON_BIKE_CYCLE_NS;
+            } else if (pikaLead) {
+                // Pikachu lead, not on bike
+                overworldNs = YELLOW_OVERWORLD_PIKACHU_FOLLOW_CYCLE_NS;
+            } else {
+                overworldNs = YELLOW_OVERWORLD_CYCLE_NS;
+            }
+        } else {
+            overworldNs = OVERWORLD_CYCLE_NS;
+        }
         angleDeg += -((delta / overworldNs) * 360.0) + manualAngleOffsetDeltaDeg;
         uncertaintyWedgeExtentDeltaDeg += 0.01;
         manualAngleOffsetDeltaDeg = 0;
@@ -147,7 +168,7 @@ public class EncounterWheelModel {
         final double correctUpAngle = ((animationFrames * ONE_FRAME_NS) / inBattleNs) * 360.0;
 
         final double correction;
-        if (game == Game.YELLOW && skipPikaCry) {
+        if (game == Game.YELLOW && pikaLead) {
             // Yellow pauses DSum incrementing for some time, while Pikachu's cry plays...
             // We're going to handle that by just jumping the appropriate amount at battle start.
             // This shouldn't matter because you can't experience encounters BEFORE Pikachu's cry...

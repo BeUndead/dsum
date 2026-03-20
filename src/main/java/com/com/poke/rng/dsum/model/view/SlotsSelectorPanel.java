@@ -11,6 +11,7 @@ import java.util.function.Function;
 public final class SlotsSelectorPanel extends JPanel {
 
     private final JCheckBox pikachu = new JCheckBox("Pikachu Lead?");
+    private final JCheckBox bike = new JCheckBox("On Bike?");
     private final JComboBox<Game> gameCombo = new JComboBox<>(Game.values());
     private final JComboBox<Route> routesCombo = new JComboBox<>(Route.values());
 
@@ -18,15 +19,18 @@ public final class SlotsSelectorPanel extends JPanel {
             final Game game,
             final Route route,
             final boolean defaultPika,
+            final boolean defaultBike,
             final Consumer<Game> onGameChanged,
             final Consumer<Route> onRouteChanged,
-            final Consumer<Boolean> onPikachuChanged) {
+            final Consumer<Boolean> onPikachuChanged,
+            final Consumer<Boolean> onBikeChanged) {
         gameCombo.setSelectedItem(game);
         gameCombo.setRenderer(new RenamingListCellRenderer<>(Enum::name));
         gameCombo.addActionListener(e -> {
             final Game newGame = (Game) gameCombo.getSelectedItem();
             onGameChanged.accept(newGame);
             pikachu.setVisible(newGame == Game.YELLOW);
+            bike.setVisible(newGame == Game.YELLOW);
         });
 
         routesCombo.setSelectedItem(route);
@@ -36,6 +40,12 @@ public final class SlotsSelectorPanel extends JPanel {
         pikachu.setVisible(game == Game.YELLOW);
         pikachu.setSelected(defaultPika);
         pikachu.addActionListener(e -> onPikachuChanged.accept(pikachu.isSelected()));
+
+        bike.setVisible(game == Game.YELLOW);
+        bike.setSelected(defaultBike);
+        bike.addActionListener(e -> onBikeChanged.accept(bike.isSelected()));
+
+        add(bike);
         add(pikachu);
         add(gameCombo);
         add(routesCombo);
