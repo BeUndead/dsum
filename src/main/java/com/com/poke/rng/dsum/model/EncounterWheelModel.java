@@ -2,6 +2,7 @@ package com.com.poke.rng.dsum.model;
 
 import com.com.poke.rng.dsum.constants.EncounterSlot;
 import com.com.poke.rng.dsum.constants.Game;
+import com.com.poke.rng.dsum.util.Triplet;
 
 import java.util.List;
 
@@ -60,7 +61,7 @@ public class EncounterWheelModel {
     private double manualAngleOffsetDeltaDeg = 0.0;
 
     private long battleEnterTime = -1;
-    private EncounterSlot suggestedSlotAtBattleStart = null;
+    private Triplet<Integer, Integer, Integer> rangeAtBattleStart = null;
 
     private EncounterSlot calibratedSlot;
     private double uncertaintyWedgeExtentDeltaDeg;
@@ -179,7 +180,7 @@ public class EncounterWheelModel {
 
         overworldStartTime = now;
         angleDeg = angleDeg + correction + (correctUpAngle + incorrectDownAngle);
-        suggestedSlotAtBattleStart = EncounterSlot.getSlot(dsumFromAngle(angleDeg));
+        rangeAtBattleStart = getDsumRange();
     }
 
     public void calibrateSlot(final int givenSlot) {
@@ -278,8 +279,17 @@ public class EncounterWheelModel {
         return dsumFromAngle(angleDeg);
     }
 
-    public EncounterSlot suggestedSlot() {
-        return suggestedSlotAtBattleStart;
+    public Triplet<Integer, Integer, Integer> getDsumRange() {
+        final double uncertaintyWedgeHalf = getUncertaintyWedgeExtentDeg() / 2;
+        final int dsum = dsumFromAngle(angleDeg);
+        final int min = dsumFromAngle(angleDeg - uncertaintyWedgeHalf);
+        final int max = dsumFromAngle(angleDeg + uncertaintyWedgeHalf);
+
+        return new Triplet<>(min, dsum, max);
+    }
+
+    public Triplet<Integer, Integer, Integer> getDsumRangeAtStartOfBattle() {
+        return rangeAtBattleStart;
     }
 
     public List<EncounterSlot> getTargetSlots() {

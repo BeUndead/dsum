@@ -4,6 +4,7 @@ import com.com.poke.rng.dsum.audio.OverlapHumPlayer;
 import com.com.poke.rng.dsum.constants.EncounterSlot;
 import com.com.poke.rng.dsum.model.EncounterWheelModel;
 import com.com.poke.rng.dsum.model.view.EncounterWheel;
+import com.com.poke.rng.dsum.util.Triplet;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.beans.PropertyChangeListener;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW;
@@ -23,21 +25,21 @@ public final class EncounterWheelController {
     private final EncounterWheel wheel;
     private final OverlapHumPlayer humPlayer;
 
-    private final Consumer<EncounterSlot> onSlotChange;
+    private final Consumer<Triplet<EncounterSlot, EncounterSlot, EncounterSlot>> onSuggestedChange;
 
-    private EncounterSlot lastSlot = null;
+    private Triplet<EncounterSlot, EncounterSlot, EncounterSlot> suggestedSlots;
     private boolean lastOverlapGreen;
 
     public EncounterWheelController(
             final EncounterWheelModel model,
             final EncounterWheel wheel,
             final OverlapHumPlayer humPlayer,
-            final Consumer<EncounterSlot> onSlotChange
+            final Consumer<Triplet<EncounterSlot, EncounterSlot, EncounterSlot>> onSuggestedChange
     ) {
         this.model = model;
         this.wheel = wheel;
         this.humPlayer = humPlayer;
-        this.onSlotChange = onSlotChange;
+        this.onSuggestedChange = onSuggestedChange;
     }
 
     public void start() {
@@ -138,22 +140,23 @@ public final class EncounterWheelController {
     }
 
     private void checkForSlotSwap() {
+
+        final Triplet<Integer, Integer, Integer> dsumRange;
         if (model.isCalibrating()) {
-            // Use the suggested slot when space was hit.
-            final EncounterSlot slot = model.suggestedSlot();
-            if (slot != null && lastSlot != slot) {
-                onSlotChange.accept(slot);
-            }
-            lastSlot = slot;
-            return;
+            dsumRange = model.getDsumRangeAtStartOfBattle();
+        } else {
+            dsumRange = model.getDsumRange();
         }
-        final EncounterSlot slot = EncounterSlot.getSlot(model.getDsum());
-        if (lastSlot != null) {
-            if (slot != lastSlot) {
-                onSlotChange.accept(slot);
-            }
+
+        final EncounterSlot min = EncounterSlot.getSlot(dsumRange.first());
+        final EncounterSlot likeliest = EncounterSlot.getSlot(dsumRange.second());
+        final EncounterSlot max = EncounterSlot.getSlot(dsumRange.third());
+
+        final Triplet<EncounterSlot, EncounterSlot, EncounterSlot> newSuggested = new Triplet<>(min, likeliest, max);
+        if (suggestedSlots != null && !suggestedSlots.equals(newSuggested)) {
+            onSuggestedChange.accept(newSuggested);
         }
-        lastSlot = slot;
+        suggestedSlots = newSuggested;
     }
 
 

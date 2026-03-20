@@ -25,7 +25,7 @@ public final class ApplicationFrame extends JFrame {
         final SlotsDisplayPanel slotsDisplayPanel = new SlotsDisplayPanel(initialGame, initialRoute, initialTarget, model::setTargetSlots);
 
         final EncounterWheelController controller =
-                new EncounterWheelController(model, wheel, new OverlapHumPlayer(), slotsDisplayPanel::setLikelySlot);
+                new EncounterWheelController(model, wheel, new OverlapHumPlayer(), slotsDisplayPanel::setSuggestedSlots);
         final SlotsSelectorPanel slotsSelectorPanel = new SlotsSelectorPanel(
                 initialGame, initialRoute, initialPika, initialBike,
                 game -> {

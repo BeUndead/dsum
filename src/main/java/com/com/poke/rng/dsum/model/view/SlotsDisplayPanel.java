@@ -1,6 +1,7 @@
 package com.com.poke.rng.dsum.model.view;
 
 import com.com.poke.rng.dsum.constants.*;
+import com.com.poke.rng.dsum.util.Triplet;
 import ext.CompoundIcon;
 import ext.TextIcon;
 
@@ -93,7 +94,7 @@ public class SlotsDisplayPanel extends JPanel {
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    public void setLikelySlot(final EncounterSlot slot) {
+    public void setSuggestedSlots(final Triplet<EncounterSlot, EncounterSlot, EncounterSlot> slots) {
         if (buttons.isEmpty()) {
             return;
         }
@@ -101,32 +102,25 @@ public class SlotsDisplayPanel extends JPanel {
             b.setBackground(Color.WHITE);
             ((GridBagLayout) getLayout()).getConstraints(b).weightx = SCALE_NORMAL;
         });
-        final int index = slot.ordinal();
-        final JToggleButton button = buttons.get(index);
-        final GridBagLayout layout = (GridBagLayout) getLayout();
-        final GridBagConstraints c = layout.getConstraints(button);
-        c.weightx = SCALE_LIKELY;
-        button.setBackground(COLOR_LIKELY);
-        remove(button);
-        add(button, c);
 
-        int nextDown = (index - 1) % buttons.size();
-        nextDown = nextDown < 0 ? nextDown + buttons.size() : nextDown;
-        int nextUp = (index + 1) % buttons.size();
+        final int firstIndex = slots.first().ordinal();
+        final int likeliestIndex = slots.second().ordinal();
+        final int lastIndex = slots.third().ordinal();
 
-        final JToggleButton buttonUp = buttons.get(nextUp);
-        final GridBagConstraints cUp = layout.getConstraints(buttonUp);
-        cUp.weightx = SCALE_NEXT;
-        buttonUp.setBackground(COLOR_NEXT);
-        remove(buttonUp);
-        add(buttonUp, cUp);
+        for (int i = firstIndex; ; i = (i + 1) % buttons.size()) {
+            final JToggleButton button = buttons.get(i);
+            final GridBagLayout layout = (GridBagLayout) getLayout();
+            final GridBagConstraints c = layout.getConstraints(button);
 
-        final JToggleButton buttonDown = buttons.get(nextDown);
-        final GridBagConstraints cDown = layout.getConstraints(buttonDown);
-        cDown.weightx = SCALE_NEXT;
-        buttonDown.setBackground(COLOR_NEXT);
-        remove(buttonDown);
-        add(buttonDown, cDown);
+            c.weightx = (i == likeliestIndex) ? SCALE_LIKELY : SCALE_NEXT;
+            button.setBackground(i == likeliestIndex ? COLOR_LIKELY : COLOR_NEXT);
+            remove(button);
+            add(button, c);
+
+            if (i == lastIndex) {
+                break;
+            }
+        }
 
         SwingUtilities.invokeLater(() -> {
             revalidate();
