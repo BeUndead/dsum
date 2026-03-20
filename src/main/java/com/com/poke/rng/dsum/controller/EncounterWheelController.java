@@ -90,7 +90,7 @@ public final class EncounterWheelController {
                 });
 
         wheel.getInputMap(WHEN_IN_FOCUSED_WINDOW)
-                .put(KeyStroke.getKeyStroke(KeyEvent.VK_CLOSE_BRACKET, 0), "manualDown");
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, 0), "manualDown");
         wheel.getActionMap()
                 .put("manualDown", new AbstractAction() {
 

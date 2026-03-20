@@ -118,6 +118,7 @@ public class EncounterWheelModel {
             final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
             angleDeg += ((delta / inBattleNs) * 360.0) + manualAngleOffsetDeltaDeg;
             uncertaintyWedgeExtentDeltaDeg = 0;
+            manualAngleOffsetDeltaDeg = 0;
             lastNow = now;
             return;
         }
@@ -125,6 +126,7 @@ public class EncounterWheelModel {
         final double overworldNs = game == Game.YELLOW ? YELLOW_OVERWORLD_CYCLE_NS : OVERWORLD_CYCLE_NS;
         angleDeg += -((delta / overworldNs) * 360.0) + manualAngleOffsetDeltaDeg;
         uncertaintyWedgeExtentDeltaDeg += 0.01;
+        manualAngleOffsetDeltaDeg = 0;
         lastNow = now;
     }
 
