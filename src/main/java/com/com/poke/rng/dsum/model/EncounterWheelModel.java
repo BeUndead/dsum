@@ -5,6 +5,7 @@ import com.com.poke.rng.dsum.constants.Game;
 
 import java.awt.event.KeyEvent;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class EncounterWheelModel {
 
@@ -55,6 +56,7 @@ public class EncounterWheelModel {
     private double manualAngleOffsetDeltaDeg = 0.0;
 
     private long battleEnterTime = -1;
+    private EncounterSlot suggestedSlotAtBattleStart = null;
 
     private EncounterSlot calibratedSlot;
     private double uncertaintyWedgeExtentDeltaDeg;
@@ -156,6 +158,7 @@ public class EncounterWheelModel {
 
         overworldStartTime = now;
         angleDeg = angleDeg + correction + (correctUpAngle + incorrectDownAngle);
+        suggestedSlotAtBattleStart = EncounterSlot.getSlot(dsumFromAngle(angleDeg));
     }
 
     public void calibrateSlot(final int givenSlot) {
@@ -252,6 +255,10 @@ public class EncounterWheelModel {
 
     public int getDsum() {
         return dsumFromAngle(angleDeg);
+    }
+
+    public EncounterSlot suggestedSlot() {
+        return suggestedSlotAtBattleStart;
     }
 
     public List<EncounterSlot> getTargetSlots() {
