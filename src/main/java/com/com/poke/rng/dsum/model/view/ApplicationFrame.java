@@ -27,7 +27,7 @@ public final class ApplicationFrame extends JFrame {
         final EncounterWheelController controller =
                 new EncounterWheelController(model, wheel, new OverlapHumPlayer(), slotsDisplayPanel::setSuggestedSlots);
         final SlotsSelectorPanel slotsSelectorPanel = new SlotsSelectorPanel(
-                initialGame, initialRoute, initialPika, initialBike,
+                initialGame, initialRoute, initialPika,
                 game -> {
                     slotsDisplayPanel.setGame(game);
                     model.setGame(game);
@@ -37,7 +37,7 @@ public final class ApplicationFrame extends JFrame {
                     model.setIsBlinds(newRoute.isBlinds());
                 },
                 model::setPikaLead,
-                model::setOnBike);
+                model::modifyYellowOverworldDsumCycleModifier);
 
         final JPanel content = new JPanel(new BorderLayout());
         final JPanel slots = new JPanel(new BorderLayout());

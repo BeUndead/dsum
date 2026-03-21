@@ -35,3 +35,13 @@ The background will also go green and a quiet hum play during this time.
 
 If your first calibration is a wide slot, this leaves a large uncertainty wedge.  It can be useful to use this
 rough calibration, to aim for any of the smaller slots, and 'recalibrate' off one of those.
+
+#### Note
+
+Yellow's DSum is *odd*.  If you find it isn't working as expected, there is a 'modifier' for it.  The spinner will
+let you +/- 10 to the frames the DSum wheel takes to rotate.  It can range from around 690 frames for a cycle, up
+to around 850.
+
+To avoid the need to do this, you can save the game, and soft-reset in the area where you are DSumming.  This 
+will reliably set the DSum cycle to be around 810 frames.  This is the default value the application uses, so after a
+save and soft-reset, you should not need to use the modifier spinner.

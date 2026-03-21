@@ -13,25 +13,38 @@ public class EncounterWheelModel {
 
     // Red/Blue:
     // Average number of frames for one DSum cycle out of battle (counting down).
-    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 375.04;
+    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 368.8214286;
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.836735;
+    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 775.2087912;
 
     // Number of frames which the in-battle DSum cycle runs before the spiral battle entry animation ends.
     private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 100;
+    // Number of frames which the in-battle DSum cycle runs before the full spiral battle entry animation ends.
+    private static final long COUNT_UP_BEFORE_FULL_SPIRAL_END_FRAMES = 117;
     // Number of frames which the in-battle DSum cycle runs before the blinds battle entry animation ends.
     private static final long COUNT_UP_BEFORE_BLINDS_END_FRAMES = 48;
+    // Number of frames which the in-battle DSum cycle runs before the blinds battle entry animation ends.
+    private static final long COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES = 43;
     // Number of frames which the in-battle DSum cycle runs after clearing 'Got away safely!'.
     private static final double COUNT_UP_AFTER_GOT_AWAY_FRAMES = 37;
 
-    // Yellow:
-    // Average number of frames for one DSum cycle out of battle (counting up - hence minus).
-    private static final double YELLOW_OVERWORLD_ON_BIKE_FRAMES = -693.958333;
-    private static final double YELLOW_OVERWORLD_PIKACHU_FOLLOW_FRAMES = -825.1739413;
+    private static final long SPIRAL_DURATION_FRAMES = 112;
+    private static final long FULL_SPIRAL_DURATION_FRAMES = 129;
+    private static final long BLINDS_DURATION_FRAMES = 70;
+    private static final long VERTICAL_BLINDS_DURATION_FRAMES = 65;
 
-    private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES = -853.510204;
+    // Yellow:
+    // Yellow's DSum is...  Interesting.
+    // It can range anywhere from ~670 - 850 frames.  But once the count has been determined on a route, it
+    // won't change.  To account for this, we have a base rate of 700, and give the ability to increase or lower the
+    // cycle duration.  Sorry
+    private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE = -817.0;
+
+    private volatile double yellowOverworldDsumCycleModifier = 0.0;
+    private volatile double yellowOverworldDsumCycleModifierNs = 0.0;
+
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 775.944444;
+    private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 794.325;
 
     // No count frames in yellow, since times are similar and go the same direction...
 
@@ -39,10 +52,7 @@ public class EncounterWheelModel {
     private static final double ONE_FRAME_NS = 1_000_000_000.0 / FRAME_RATE;
 
     private static final double OVERWORLD_CYCLE_NS = ONE_FRAME_NS * OVERWORLD_DSUM_CYCLE_FRAMES;
-    private static final double YELLOW_OVERWORLD_CYCLE_NS = ONE_FRAME_NS * YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES;
-    private static final double YELLOW_OVERWORLD_ON_BIKE_CYCLE_NS = ONE_FRAME_NS * YELLOW_OVERWORLD_ON_BIKE_FRAMES;
-    private static final double YELLOW_OVERWORLD_PIKACHU_FOLLOW_CYCLE_NS
-            = ONE_FRAME_NS * YELLOW_OVERWORLD_PIKACHU_FOLLOW_FRAMES;
+    private static final double YELLOW_OVERWORLD_CYCLE_NS = ONE_FRAME_NS * YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE;
     private static final double IN_BATTLE_CYCLE_NS = ONE_FRAME_NS * IN_BATTLE_DSUM_CYCLE_FRAMES;
     private static final double YELLOW_IN_BATTLE_CYCLE_NS = ONE_FRAME_NS * YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES;
 
@@ -69,7 +79,6 @@ public class EncounterWheelModel {
     private boolean warningBeepPending;
 
     private boolean pikaLead = true;
-    private boolean bike = false;
 
     private Game game;
 
@@ -90,8 +99,9 @@ public class EncounterWheelModel {
         this.pikaLead = skip;
     }
 
-    public void setOnBike(final boolean bike) {
-        this.bike = bike;
+    public void modifyYellowOverworldDsumCycleModifier(final double newModifier) {
+        yellowOverworldDsumCycleModifier = -newModifier;
+        yellowOverworldDsumCycleModifierNs = ONE_FRAME_NS * yellowOverworldDsumCycleModifier;
     }
 
     private static double angleFromDsum(final int dsum) {
@@ -135,30 +145,26 @@ public class EncounterWheelModel {
             return;
         }
 
-        final double overworldNs;
-        if (game == Game.YELLOW) {
-            if (bike) {
-                overworldNs = YELLOW_OVERWORLD_ON_BIKE_CYCLE_NS;
-            } else if (pikaLead) {
-                // Pikachu lead, not on bike
-                overworldNs = YELLOW_OVERWORLD_PIKACHU_FOLLOW_CYCLE_NS;
-            } else {
-                overworldNs = YELLOW_OVERWORLD_CYCLE_NS;
-            }
-        } else {
-            overworldNs = OVERWORLD_CYCLE_NS;
-        }
+        final double overworldNs = game == Game.YELLOW
+                ? (YELLOW_OVERWORLD_CYCLE_NS + yellowOverworldDsumCycleModifierNs) : OVERWORLD_CYCLE_NS;
         angleDeg += -((delta / overworldNs) * 360.0) + manualAngleOffsetDeltaDeg;
         uncertaintyWedgeExtentDeltaDeg += 0.02;
         manualAngleOffsetDeltaDeg = 0;
         lastNow = now;
     }
 
-    public void battleStart() {
+    public void battleStart(final boolean altAnimation) {
         final long now = System.nanoTime();
         final Game game = this.game;
-
-        long animationFrames = isBlinds ? COUNT_UP_BEFORE_BLINDS_END_FRAMES : COUNT_UP_BEFORE_SPIRAL_END_FRAMES;
+        final long animationFrames;
+        final long fullDurationFrames;
+        if (isBlinds) {
+            animationFrames = altAnimation ? COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES : COUNT_UP_BEFORE_BLINDS_END_FRAMES;
+            fullDurationFrames = altAnimation ? VERTICAL_BLINDS_DURATION_FRAMES : BLINDS_DURATION_FRAMES;
+        } else {
+            animationFrames = altAnimation ? COUNT_UP_BEFORE_FULL_SPIRAL_END_FRAMES : COUNT_UP_BEFORE_SPIRAL_END_FRAMES;
+            fullDurationFrames = altAnimation ? FULL_SPIRAL_DURATION_FRAMES : SPIRAL_DURATION_FRAMES;
+        }
         battleEnterTime = now - (long) (animationFrames * ONE_FRAME_NS);
         // We need to treat the angleDeg as if we've been counting up for that time too
         // Calculate the incorrect angle which has been going down:
@@ -178,12 +184,17 @@ public class EncounterWheelModel {
             correction = 0.0;
         }
 
-        overworldStartTime = now;
-        angleDeg = angleDeg + correction + (correctUpAngle + incorrectDownAngle);
-        rangeAtBattleStart = getDsumRange();
+        angleDeg = angleDeg + (correctUpAngle + incorrectDownAngle);
+        // Calculate the suggested range BEFORE including the correction, since Pikachu's cry adjustment comes
+        // after the battle start.
+        // The 'battleEnterTime' calculates when the DSum started reversing, but /not/ when the encounter was generated
+        final double angleDelta = (fullDurationFrames * ONE_FRAME_NS) / inBattleNs * 360.0;
+        rangeAtBattleStart = getDsumRange(angleDelta);
+
+        angleDeg += correction;
     }
 
-    public void calibrateSlot(final int givenSlot) {
+    public void calibrateSlot(final int givenSlot, final boolean recalibrate) {
 
         if (battleEnterTime == -1) {
             return;
@@ -201,7 +212,7 @@ public class EncounterWheelModel {
         final int midDsum = (slot.min() + slot.max()) / 2;
         final long timeInBattle = now - battleEnterTime;
         final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
-        final double overworldNs = game == Game.YELLOW ? YELLOW_OVERWORLD_CYCLE_NS : OVERWORLD_CYCLE_NS;
+        double overworldNs = game == Game.YELLOW ? (YELLOW_OVERWORLD_CYCLE_NS + yellowOverworldDsumCycleModifierNs) : OVERWORLD_CYCLE_NS;
         double angleChangeInBattle = (timeInBattle / inBattleNs) * 360.0;
         // We're going to start reversing immediately, but the game keeps counting up for a few frames after we clear
         // the 'Got away safely!' message.  We account for that here with whatever this formula is...
@@ -217,11 +228,23 @@ public class EncounterWheelModel {
         final double angleAtBattleStart = angleFromDsum(midDsum);
         final double newAngle = angleAtBattleStart + angleChangeInBattle;
 
+        recalibration:
+        if (recalibrate && game == Game.YELLOW) {
+            // Nope, this doesn't work...
+        }
+
         angleDeg = newAngle + ((now - lastNow) / overworldNs) * 360.0;
         battleEnterTime = -1;
         calibratedSlot = slot;
         uncertaintyWedgeExtentDeltaDeg = 0;
         manualAngleOffsetDeltaDeg = 0;
+        overworldStartTime = now + (long) (COUNT_UP_AFTER_GOT_AWAY_FRAMES * ONE_FRAME_NS);
+    }
+
+    private int smallestMod(final int in1, final int in2, final int mod) {
+        final int result = (in1 - in2) % mod;
+        final int modBy2 = mod / 2;
+        return result < modBy2 ? result : result - modBy2;
     }
 
 
@@ -280,10 +303,15 @@ public class EncounterWheelModel {
     }
 
     public Triplet<Integer, Integer, Integer> getDsumRange() {
+        return getDsumRange(0);
+    }
+
+    public Triplet<Integer, Integer, Integer> getDsumRange(final double angleOffset) {
         final double uncertaintyWedgeHalf = getUncertaintyWedgeExtentDeg() / 2;
-        final int dsum = dsumFromAngle(angleDeg);
-        final int min = dsumFromAngle(angleDeg - uncertaintyWedgeHalf);
-        final int max = dsumFromAngle(angleDeg + uncertaintyWedgeHalf);
+        final double usedDeg = angleDeg + angleOffset;
+        final int dsum = dsumFromAngle(usedDeg);
+        final int min = dsumFromAngle(usedDeg - uncertaintyWedgeHalf);
+        final int max = dsumFromAngle(usedDeg + uncertaintyWedgeHalf);
 
         return new Triplet<>(min, dsum, max);
     }

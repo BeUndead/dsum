@@ -9,6 +9,7 @@ import com.com.poke.rng.dsum.util.Triplet;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.beans.PropertyChangeListener;
@@ -64,7 +65,16 @@ public final class EncounterWheelController {
                 .put("battleStart", new AbstractAction() {
                     @Override
                     public void actionPerformed(final ActionEvent e) {
-                        model.battleStart();
+                        model.battleStart(false);
+                    }
+                });
+        wheel.getInputMap(WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, InputEvent.SHIFT_DOWN_MASK), "battleStartAlt");
+        wheel.getActionMap()
+                .put("battleStartAlt", new AbstractAction() {
+                    @Override
+                    public void actionPerformed(final ActionEvent e) {
+                        model.battleStart(true);
                     }
                 });
 
@@ -75,7 +85,12 @@ public final class EncounterWheelController {
             wheel.getInputMap(WHEN_IN_FOCUSED_WINDOW)
                     .put(KeyStroke.getKeyStroke(i, 0), "calibrateSlot" + slot);
             wheel.getActionMap()
-                    .put("calibrateSlot" + slot, new CalibrateSlotAction(slot));
+                    .put("calibrateSlot" + slot, new CalibrateSlotAction(false, slot));
+
+            wheel.getInputMap(WHEN_IN_FOCUSED_WINDOW)
+                    .put(KeyStroke.getKeyStroke(i, InputEvent.CTRL_DOWN_MASK), "recalibrateSlot" + slot);
+            wheel.getActionMap()
+                    .put("recalibrateSlot" + slot, new CalibrateSlotAction(true, slot));
         }
 
         wheel.getInputMap(WHEN_IN_FOCUSED_WINDOW)
@@ -162,15 +177,17 @@ public final class EncounterWheelController {
 
     private final class CalibrateSlotAction extends AbstractAction {
 
+        private final boolean recalibrate;
         private final int slot;
 
-        public CalibrateSlotAction(final int slot) {
+        public CalibrateSlotAction(final boolean recalibrate, final int slot) {
+            this.recalibrate = recalibrate;
             this.slot = slot;
         }
 
         @Override
-        public void actionPerformed(ActionEvent e) {
-            model.calibrateSlot(slot);
+        public void actionPerformed(final ActionEvent e) {
+            model.calibrateSlot(slot, recalibrate);
         }
     }
 }
