@@ -1671,6 +1671,18 @@ public enum Route {
             of(Ditto, 65),
             of(Lickitung, 55),
             of(Lickitung, 50)
+    ),
+    SURFING(
+            of(Tentacool, 5),
+            of(Tentacool, 10),
+            of(Tentacool, 15),
+            of(Tentacool, 5),
+            of(Tentacool, 10),
+            of(Tentacool, 15),
+            of(Tentacool, 20),
+            of(Tentacool, 30),
+            of(Tentacool, 35),
+            of(Tentacool, 40)
     );
 
     private final Map<Game, Map<EncounterSlot, Encounter>> encounters;
@@ -1687,7 +1699,7 @@ public enum Route {
         final Map<EncounterSlot, Encounter> blueEncounters = new EnumMap<>(EncounterSlot.class);
         final Map<EncounterSlot, Encounter> yellowEncounters = new EnumMap<>(EncounterSlot.class);
         final int yellowOffset;
-        if (encounters.length == 20) {
+        if (encounters.length == 10 | encounters.length == 20) {
             // Blue and Red have the same slots, in the first 10
             for (int i = 0; i < 10; i++) {
                 redEncounters.put(EncounterSlot.values()[i], encounters[i]);
@@ -1705,9 +1717,11 @@ public enum Route {
             yellowOffset = 20;
         }
 
-        // Yellow's slots are always the last 10.
-        for (int i = yellowOffset; i < encounters.length; i++) {
-            yellowEncounters.put(EncounterSlot.values()[i - yellowOffset], encounters[i]);
+        // Yellow's slots are always the last 10, except for surfing...
+        if (yellowOffset < encounters.length) {
+            for (int i = yellowOffset; i < encounters.length; i++) {
+                yellowEncounters.put(EncounterSlot.values()[i - yellowOffset], encounters[i]);
+            }
         }
 
         this.encounters.put(Game.BLUE, blueEncounters);
@@ -1717,6 +1731,11 @@ public enum Route {
 
     public Map<Game, Map<EncounterSlot, Encounter>> getEncounters() {
         return Collections.unmodifiableMap(encounters);
+    }
+
+    public Encounter encounterFor(final Game game, final EncounterSlot slot) {
+        final Map<EncounterSlot, Encounter> bySlot = encounters.get(game);
+        return bySlot == null ? null : bySlot.get(slot);
     }
 
     public boolean isBlinds() {

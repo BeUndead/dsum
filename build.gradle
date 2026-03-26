@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.com'
-version = '0.7.0-SNAPSHOT'
+version = '0.8.0-SNAPSHOT'
 description = 'dsum'
 
 java {
@@ -17,6 +17,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.formdev:flatlaf:3.5.4'
 }
 
 tasks.named('test') {
