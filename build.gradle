@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.com'
-version = '0.8.0-SNAPSHOT'
+version = '1.0.0'
 description = 'dsum'
 
 java {
