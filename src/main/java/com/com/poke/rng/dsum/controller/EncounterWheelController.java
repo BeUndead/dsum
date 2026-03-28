@@ -13,7 +13,9 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.util.function.Consumer;
 
 public final class EncounterWheelController implements NativeKeyListener {
@@ -39,6 +41,19 @@ public final class EncounterWheelController implements NativeKeyListener {
     private int approachBarBeepMask;
     private double lastApproachBarProgress = -1;
 
+    /**
+     * When false (default), keys are handled via Swing on the wheel / bar when they have focus.
+     * When true, JNativeHook captures keys globally (works when another app is focused).
+     */
+    private boolean globalHookActive;
+
+    private final KeyListener swingKeyListener = new KeyAdapter() {
+        @Override
+        public void keyPressed(final KeyEvent e) {
+            handleKeyCommand(e.getKeyCode(), e.getModifiersEx());
+        }
+    };
+
     public EncounterWheelController(
             final EncounterWheelModel model,
             final OverlapHumPlayer humPlayer,
@@ -52,7 +67,43 @@ public final class EncounterWheelController implements NativeKeyListener {
         this.repaintTargets = repaintTargets.clone();
         this.humPlayer = humPlayer;
         this.onSuggestedChange = onSuggestedChange;
+    }
 
+    /**
+     * Exactly one path is active: global native capture or per-component Swing listeners on the wheel / bar.
+     *
+     * @throws RuntimeException if enabling background capture but the native hook could not be registered
+     */
+    public void setBackgroundKeyboardCapture(final boolean enabled) {
+        if (enabled == globalHookActive) {
+            return;
+        }
+        if (enabled) {
+            // Background: drop Swing listeners first so keys are not handled twice once the hook runs.
+            detachSwingKeyListeners();
+            unregisterNativeKeyboardCapture();
+            try {
+                registerNativeKeyboardCapture();
+                globalHookActive = true;
+            } catch (final RuntimeException ex) {
+                attachSwingKeyListeners();
+                globalHookActive = false;
+                throw ex;
+            }
+        } else {
+            // Swing: tear down native capture completely, then attach listeners.
+            unregisterNativeKeyboardCapture();
+            detachSwingKeyListeners();
+            attachSwingKeyListeners();
+            globalHookActive = false;
+        }
+    }
+
+    public boolean isBackgroundKeyboardCapture() {
+        return globalHookActive;
+    }
+
+    private void registerNativeKeyboardCapture() {
         GlobalScreen.setEventDispatcher(new SwingDispatchService());
         try {
             GlobalScreen.registerNativeHook();
@@ -60,6 +111,36 @@ public final class EncounterWheelController implements NativeKeyListener {
             throw new RuntimeException(nhEx);
         }
         GlobalScreen.addNativeKeyListener(this);
+    }
+
+    /** Remove this controller from the native hook and unregister GlobalScreen so no global capture remains. */
+    private void unregisterNativeKeyboardCapture() {
+        try {
+            GlobalScreen.removeNativeKeyListener(this);
+        } catch (final Exception ignored) {
+            // listener may not be registered
+        }
+        try {
+            if (GlobalScreen.isNativeHookRegistered()) {
+                GlobalScreen.unregisterNativeHook();
+            }
+        } catch (final NativeHookException nhEx) {
+            throw new RuntimeException(nhEx);
+        }
+    }
+
+    private void attachSwingKeyListeners() {
+        for (final JComponent c : repaintTargets) {
+            c.removeKeyListener(swingKeyListener);
+            c.addKeyListener(swingKeyListener);
+        }
+    }
+
+    /** Remove Swing key handling from wheel / bar (used when switching to background capture). */
+    private void detachSwingKeyListeners() {
+        for (final JComponent c : repaintTargets) {
+            c.removeKeyListener(swingKeyListener);
+        }
     }
 
     public void setSoundMuted(final boolean muted) {
@@ -89,6 +170,7 @@ public final class EncounterWheelController implements NativeKeyListener {
         for (final JComponent c : repaintTargets) {
             c.setFocusable(true);
         }
+        attachSwingKeyListeners();
 
         final Timer timer = new Timer(TIMER_MS, e -> {
             model.update(System.nanoTime());
@@ -104,15 +186,18 @@ public final class EncounterWheelController implements NativeKeyListener {
 
     @Override
     public void nativeKeyPressed(final NativeKeyEvent e) {
-        final int ex = e.getModifiers();
-        if ((ex & (InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK)) != 0) {
+        handleKeyCommand(e.getRawCode(), e.getModifiers());
+    }
+
+    private void handleKeyCommand(final int keyCode, final int modifiersEx) {
+        if ((modifiersEx & (InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK)) != 0) {
             return;
         }
 
-        final boolean ctrl = (ex & InputEvent.CTRL_DOWN_MASK) != 0;
-        final boolean shift = (ex & InputEvent.SHIFT_DOWN_MASK) != 0;
+        final boolean ctrl = (modifiersEx & InputEvent.CTRL_DOWN_MASK) != 0;
+        final boolean shift = (modifiersEx & InputEvent.SHIFT_DOWN_MASK) != 0;
 
-        switch (e.getRawCode()) {
+        switch (keyCode) {
             case KeyEvent.VK_SPACE -> {
                 model.battleStart(shift);
             }
@@ -121,7 +206,7 @@ public final class EncounterWheelController implements NativeKeyListener {
                 if (shift) {
                     return;
                 }
-                final int slot = e.getRawCode() == KeyEvent.VK_0 ? 10 : e.getRawCode() - KeyEvent.VK_0;
+                final int slot = keyCode == KeyEvent.VK_0 ? 10 : keyCode - KeyEvent.VK_0;
                 final boolean wasCalibrating = model.isCalibrating();
                 model.calibrateSlot(slot, ctrl);
                 if (wasCalibrating) {

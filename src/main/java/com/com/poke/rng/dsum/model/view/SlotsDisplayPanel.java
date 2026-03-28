@@ -107,6 +107,19 @@ public class SlotsDisplayPanel extends JPanel {
         this.update();
     }
 
+    public void applyUiThemeColors() {
+        setBackground(UiTheme.SURFACE);
+        refreshToggleStyles();
+        for (int j = 0; j < slotColorBars.size(); j++) {
+            applyIdleBar(slotColorBars.get(j), EncounterSlot.values()[j]);
+            applyIdleAmberBar(suggestionAmberBars.get(j));
+        }
+        if (lastSuggested != null) {
+            setSuggestedSlots(lastSuggested);
+        }
+        repaint();
+    }
+
     public boolean isCompact() {
         return compact;
     }

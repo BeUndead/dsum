@@ -7,6 +7,7 @@ import com.com.poke.rng.dsum.constants.Route;
 import com.com.poke.rng.dsum.util.Triplet;
 
 import java.util.List;
+import java.util.Objects;
 
 public class EncounterWheelModel {
 
@@ -76,12 +77,6 @@ public class EncounterWheelModel {
      */
     private static final int SUGGESTION_LEAD_GAMEBOY_FRAMES = 7;
 
-    // Note - if corner bonking, don't use these...
-    /** Suggested slots only: overworld step resolves in this many frames on bike (vs foot). */
-    public static final int SUGGESTION_STEP_LAG_FRAMES_BIKE = 3;
-    /** Suggested slots only: overworld step resolves in this many frames on foot (vs bike). */
-    public static final int SUGGESTION_STEP_LAG_FRAMES_FOOT = 17;
-
     /**
      * Wedge widens by this many degrees on each side for each full in-battle wheel rotation (360° at in-battle rate);
      * total added width is twice this (e.g. 1.5 rotations → 4.5°/side → 9° total).
@@ -138,10 +133,10 @@ public class EncounterWheelModel {
     private boolean pikaLead = true;
 
     /**
-     * Suggested slots only: {@link #SUGGESTION_STEP_LAG_FRAMES_BIKE} or {@link #SUGGESTION_STEP_LAG_FRAMES_FOOT} from
-     * {@link #setOnBike(boolean)} — shifts angle backward by that many overworld frames (vs {@link #SUGGESTION_LEAD_GAMEBOY_FRAMES} forward).
+     * Suggested slots only: step-lag frames from {@link OverworldMovementMode#suggestionStepLagFrames()} (vs
+     * {@link #SUGGESTION_LEAD_GAMEBOY_FRAMES} forward).
      */
-    private volatile int suggestionStepLagGameboyFrames = SUGGESTION_STEP_LAG_FRAMES_BIKE;
+    private volatile OverworldMovementMode overworldMovementMode = OverworldMovementMode.BIKE;
 
     private Game game;
 
@@ -172,9 +167,12 @@ public class EncounterWheelModel {
         this.pikaLead = skip;
     }
 
-    public void setOnBike(final boolean onBike) {
-        suggestionStepLagGameboyFrames =
-                onBike ? SUGGESTION_STEP_LAG_FRAMES_BIKE : SUGGESTION_STEP_LAG_FRAMES_FOOT;
+    public void setOverworldMovementMode(final OverworldMovementMode mode) {
+        overworldMovementMode = Objects.requireNonNull(mode);
+    }
+
+    public OverworldMovementMode getOverworldMovementMode() {
+        return overworldMovementMode;
     }
 
     public void modifyYellowOverworldDsumCycleModifier(final double newModifier) {
@@ -606,7 +604,7 @@ public class EncounterWheelModel {
         final double overworldNs = overworldCycleNs();
         final double perFrameDeg = -(ONE_FRAME_NS / overworldNs) * 360.0;
         final double angleOffset =
-                (SUGGESTION_LEAD_GAMEBOY_FRAMES - suggestionStepLagGameboyFrames) * perFrameDeg;
+                (SUGGESTION_LEAD_GAMEBOY_FRAMES - overworldMovementMode.suggestionStepLagFrames()) * perFrameDeg;
         return getDsumRange(angleOffset);
     }
 

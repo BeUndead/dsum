@@ -2,7 +2,7 @@ package com.com.poke.rng.dsum.model.view;
 
 import com.com.poke.rng.dsum.constants.Game;
 import com.com.poke.rng.dsum.constants.Route;
-import com.com.poke.rng.dsum.model.EncounterWheelModel;
+import com.com.poke.rng.dsum.model.OverworldMovementMode;
 import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
@@ -24,11 +24,18 @@ public final class SlotsSelectorPanel extends JPanel {
     private final boolean[] detailsExpanded = {false};
     private boolean compactChrome;
 
+    private JLabel modifierLabel;
+    private JLabel leadLabel;
+    private JCheckBox pikachu;
+    private JToggleButton soundMute;
+    private JLabel movementModeLabel;
+    private JPanel movementModeChip;
+
     public SlotsSelectorPanel(
             final Game game,
             final Route route,
             final boolean defaultPika,
-            final boolean defaultOnBike,
+            final OverworldMovementMode defaultMovementMode,
             final int initialLeadLevel,
             final Consumer<Game> onGameChanged,
             final Consumer<Route> onRouteChanged,
@@ -36,9 +43,9 @@ public final class SlotsSelectorPanel extends JPanel {
             final Consumer<Integer> onModifierChanged,
             final Consumer<Integer> onLeadLevelChanged,
             final Consumer<Boolean> onSoundMutedChanged,
-            final Consumer<Boolean> onOnBikeChanged) {
+            final Consumer<OverworldMovementMode> onMovementModeChanged) {
 
-        final JLabel modifierLabel = new JLabel("Mod:");
+        modifierLabel = new JLabel("Mod:");
         final JSpinner modifier = new JSpinner();
         modifierLabel.setLabelFor(modifier);
         modifierLabel.setForeground(UiTheme.TEXT_MUTED);
@@ -52,14 +59,14 @@ public final class SlotsSelectorPanel extends JPanel {
         }
         modifier.setPreferredSize(new Dimension(76, 32));
 
-        final JCheckBox pikachu = new JCheckBox();
+        pikachu = new JCheckBox();
         pikachu.setText("Pika lead");
         pikachu.setForeground(UiTheme.TEXT_PRIMARY);
         pikachu.setToolTipText("Pikachu in party lead (Yellow)");
         pikachu.setSelected(defaultPika);
         pikachu.addActionListener(e -> onPikachuChanged.accept(pikachu.isSelected()));
 
-        final JLabel leadLabel = new JLabel("Lead Lv:");
+        leadLabel = new JLabel("Lead Lv:");
         leadLabel.setForeground(UiTheme.TEXT_MUTED);
         final JSpinner leadLevelSpinner = new JSpinner();
         leadLabel.setLabelFor(leadLevelSpinner);
@@ -70,16 +77,6 @@ public final class SlotsSelectorPanel extends JPanel {
             leadEditor.getTextField().setColumns(2);
         }
         leadLevelSpinner.setPreferredSize(new Dimension(64, 32));
-
-        final JCheckBox onBikeCheck = new JCheckBox("On bike");
-        onBikeCheck.setForeground(UiTheme.TEXT_PRIMARY);
-        onBikeCheck.setToolTipText(
-                "Suggested slots only: step delay %d frames on bike, %d on foot (Game Boy)."
-                        .formatted(
-                                EncounterWheelModel.SUGGESTION_STEP_LAG_FRAMES_BIKE,
-                                EncounterWheelModel.SUGGESTION_STEP_LAG_FRAMES_FOOT));
-        onBikeCheck.setSelected(defaultOnBike);
-        onBikeCheck.addActionListener(e -> onOnBikeChanged.accept(onBikeCheck.isSelected()));
 
         final Runnable refreshYellowDetailVisibility = () -> {
             final boolean yellowGame = gameCombo.getSelectedItem() == Game.YELLOW;
@@ -108,7 +105,7 @@ public final class SlotsSelectorPanel extends JPanel {
         routesCombo.setPreferredSize(new Dimension(200, 32));
         routesCombo.addActionListener(e -> onRouteChanged.accept((Route) routesCombo.getSelectedItem()));
 
-        final JToggleButton soundMute = new JToggleButton();
+        soundMute = new JToggleButton();
         soundMute.setIcon(new VolumeToolbarIcon(false));
         soundMute.setSelectedIcon(new VolumeToolbarIcon(true));
         soundMute.setForeground(UiTheme.TEXT_PRIMARY);
@@ -146,12 +143,12 @@ public final class SlotsSelectorPanel extends JPanel {
         mainRow.setOpaque(false);
         mainRow.add(gameCombo);
         mainRow.add(routesCombo);
+        mainRow.add(buildMovementModeSelector(defaultMovementMode, onMovementModeChanged));
 
         detailsPanel.setOpaque(true);
         detailsPanel.setBackground(UiTheme.SURFACE_ALT);
         detailsPanel.putClientProperty(FlatClientProperties.STYLE, "arc: 10");
         detailsPanel.setBorder(new EmptyBorder(10, 12, 12, 12));
-        detailsPanel.add(onBikeCheck);
         detailsPanel.add(leadLabel);
         detailsPanel.add(leadLevelSpinner);
         detailsPanel.add(modifierLabel);
@@ -190,7 +187,75 @@ public final class SlotsSelectorPanel extends JPanel {
         add(body, BorderLayout.CENTER);
 
         refreshYellowDetailVisibility.run();
-        onOnBikeChanged.accept(onBikeCheck.isSelected());
+        onMovementModeChanged.accept(defaultMovementMode);
+    }
+
+    private JPanel buildMovementModeSelector(
+            final OverworldMovementMode initial,
+            final Consumer<OverworldMovementMode> onChanged) {
+        final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        row.setOpaque(false);
+        movementModeLabel = new JLabel("Move:");
+        movementModeLabel.setForeground(UiTheme.TEXT_MUTED);
+        movementModeLabel.setFont(movementModeLabel.getFont().deriveFont(Font.PLAIN, 12f));
+        movementModeLabel.setToolTipText("Overworld step type — affects suggested-slot timing only.");
+        row.add(movementModeLabel);
+
+        final JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        group.setOpaque(true);
+        group.setBackground(UiTheme.SURFACE_ALT);
+        group.putClientProperty(FlatClientProperties.STYLE, "arc: 10");
+        group.setBorder(new EmptyBorder(4, 6, 4, 6));
+        movementModeChip = group;
+
+        final ButtonGroup bg = new ButtonGroup();
+        for (final OverworldMovementMode m : OverworldMovementMode.values()) {
+            final JToggleButton tb = new JToggleButton(new MovementModeIcon(m));
+            tb.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+            tb.setFocusable(false);
+            tb.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+            tb.setToolTipText(switch (m) {
+                case CORNER_BONK -> "Corner bonking — 0 frame step lag";
+                case BIKE -> "Bike — 9 frame step lag";
+                case WALKING -> "Walking — 17 frame step lag";
+            });
+            tb.getAccessibleContext().setAccessibleName(switch (m) {
+                case CORNER_BONK -> "Corner bonking movement";
+                case BIKE -> "Bicycle movement";
+                case WALKING -> "Walking movement";
+            });
+            bg.add(tb);
+            group.add(tb);
+            final OverworldMovementMode mode = m;
+            tb.addActionListener(e -> {
+                if (tb.isSelected()) {
+                    onChanged.accept(mode);
+                }
+            });
+        }
+        ((JToggleButton) group.getComponent(initial.ordinal())).setSelected(true);
+        row.add(group);
+        return row;
+    }
+
+    public void applyUiThemeColors() {
+        setBackground(UiTheme.SURFACE);
+        setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, UiTheme.SELECTOR_DIVIDER),
+                new EmptyBorder(12, 14, 14, 14)));
+        detailsPanel.setBackground(UiTheme.SURFACE_ALT);
+        modifierLabel.setForeground(UiTheme.TEXT_MUTED);
+        leadLabel.setForeground(UiTheme.TEXT_MUTED);
+        pikachu.setForeground(UiTheme.TEXT_PRIMARY);
+        soundMute.setForeground(UiTheme.TEXT_PRIMARY);
+        soundMute.repaint();
+        detailsToggle.setForeground(UiTheme.ACCENT);
+        setupButton.setForeground(UiTheme.ACCENT);
+        movementModeLabel.setForeground(UiTheme.TEXT_MUTED);
+        movementModeChip.setBackground(UiTheme.SURFACE_ALT);
+        for (final Component c : movementModeChip.getComponents()) {
+            c.repaint();
+        }
     }
 
     public void addLeadingToolbar(final JComponent group) {
