@@ -17,7 +17,7 @@ public class EncounterWheelModel {
     // Average number of frames for one DSum cycle out of battle (counting down).
     private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 372.221374;
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.84;
+    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.2149837;
 
     // Number of frames which the in-battle DSum cycle runs before the spiral battle entry animation ends.
     private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 100;
@@ -49,8 +49,8 @@ public class EncounterWheelModel {
     // cycle duration.  Sorry
     private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE = -817.0;
 
-    private volatile double yellowOverworldDsumCycleModifier = 0.0;
-    private volatile double yellowOverworldDsumCycleModifierNs = 0.0;
+    private volatile double overworldDsumCycleModifier = 0.0;
+    private volatile double overworldDsumCycleModifierNs = 0.0;
 
     // Average number of frames for one DSum cycle in battle (counting up).
     private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 794.325;
@@ -76,6 +76,7 @@ public class EncounterWheelModel {
      */
     private static final int SUGGESTION_LEAD_GAMEBOY_FRAMES = 7;
 
+    // Note - if corner bonking, don't use these...
     /** Suggested slots only: overworld step resolves in this many frames on bike (vs foot). */
     public static final int SUGGESTION_STEP_LAG_FRAMES_BIKE = 3;
     /** Suggested slots only: overworld step resolves in this many frames on foot (vs bike). */
@@ -177,8 +178,12 @@ public class EncounterWheelModel {
     }
 
     public void modifyYellowOverworldDsumCycleModifier(final double newModifier) {
-        yellowOverworldDsumCycleModifier = -newModifier;
-        yellowOverworldDsumCycleModifierNs = ONE_FRAME_NS * yellowOverworldDsumCycleModifier;
+        if (game == Game.YELLOW) {
+            overworldDsumCycleModifier = -newModifier;
+        } else {
+            overworldDsumCycleModifier = newModifier;
+        }
+        overworldDsumCycleModifierNs = ONE_FRAME_NS * overworldDsumCycleModifier;
         refreshTargetOverlapApproachProgress();
     }
 
@@ -237,7 +242,7 @@ public class EncounterWheelModel {
         }
 
         final double overworldNs = game == Game.YELLOW
-                ? (YELLOW_OVERWORLD_CYCLE_NS + yellowOverworldDsumCycleModifierNs) : OVERWORLD_CYCLE_NS;
+                ? (YELLOW_OVERWORLD_CYCLE_NS + overworldDsumCycleModifierNs) : OVERWORLD_CYCLE_NS;
         angleDeg += -((delta / overworldNs) * 360.0) + manualAngleOffsetDeltaDeg;
         uncertaintyWedgeExtentDeltaDeg += uncertaintyWedgeExtraDegForInBattleAngle((delta / overworldNs) * 360);
         manualAngleOffsetDeltaDeg = 0;
@@ -333,7 +338,7 @@ public class EncounterWheelModel {
             }
         }
         final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
-        double overworldNs = game == Game.YELLOW ? (YELLOW_OVERWORLD_CYCLE_NS + yellowOverworldDsumCycleModifierNs) : OVERWORLD_CYCLE_NS;
+        double overworldNs = game == Game.YELLOW ? (YELLOW_OVERWORLD_CYCLE_NS + overworldDsumCycleModifierNs) : OVERWORLD_CYCLE_NS;
         double angleChangeInBattle = (timeInBattle / inBattleNs) * 360.0;
         // We're going to start reversing immediately, but the game keeps counting up for a few frames after we clear
         // the 'Got away safely!' message.  We account for that here with whatever this formula is...
@@ -474,7 +479,7 @@ public class EncounterWheelModel {
 
     private double overworldCycleNs() {
         return game == Game.YELLOW
-                ? (YELLOW_OVERWORLD_CYCLE_NS + yellowOverworldDsumCycleModifierNs)
+                ? (YELLOW_OVERWORLD_CYCLE_NS + overworldDsumCycleModifierNs)
                 : OVERWORLD_CYCLE_NS;
     }
 

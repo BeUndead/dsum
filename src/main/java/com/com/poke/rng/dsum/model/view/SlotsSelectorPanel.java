@@ -33,24 +33,24 @@ public final class SlotsSelectorPanel extends JPanel {
             final Consumer<Game> onGameChanged,
             final Consumer<Route> onRouteChanged,
             final Consumer<Boolean> onPikachuChanged,
-            final Consumer<Integer> onYellowModifierChanged,
+            final Consumer<Integer> onModifierChanged,
             final Consumer<Integer> onLeadLevelChanged,
             final Consumer<Boolean> onSoundMutedChanged,
             final Consumer<Boolean> onOnBikeChanged) {
 
-        final JLabel yellowModifierLabel = new JLabel("Mod:");
-        final JSpinner yellowModifier = new JSpinner();
-        yellowModifierLabel.setLabelFor(yellowModifier);
-        yellowModifierLabel.setForeground(UiTheme.TEXT_MUTED);
-        yellowModifierLabel.setToolTipText("Yellow overworld DSum cycle modifier");
+        final JLabel modifierLabel = new JLabel("Mod:");
+        final JSpinner modifier = new JSpinner();
+        modifierLabel.setLabelFor(modifier);
+        modifierLabel.setForeground(UiTheme.TEXT_MUTED);
+        modifierLabel.setToolTipText("Overworld DSum cycle modifier");
 
         final SpinnerNumberModel spinModel = new SpinnerNumberModel(0, -100, 100, 10);
-        yellowModifier.setModel(spinModel);
-        yellowModifier.addChangeListener(e -> onYellowModifierChanged.accept((Integer) spinModel.getValue()));
-        if (yellowModifier.getEditor() instanceof JSpinner.NumberEditor editor) {
+        modifier.setModel(spinModel);
+        modifier.addChangeListener(e -> onModifierChanged.accept((Integer) spinModel.getValue()));
+        if (modifier.getEditor() instanceof JSpinner.NumberEditor editor) {
             editor.getTextField().setColumns(3);
         }
-        yellowModifier.setPreferredSize(new Dimension(76, 32));
+        modifier.setPreferredSize(new Dimension(76, 32));
 
         final JCheckBox pikachu = new JCheckBox();
         pikachu.setText("Pika lead");
@@ -83,8 +83,6 @@ public final class SlotsSelectorPanel extends JPanel {
 
         final Runnable refreshYellowDetailVisibility = () -> {
             final boolean yellowGame = gameCombo.getSelectedItem() == Game.YELLOW;
-            yellowModifierLabel.setVisible(yellowGame);
-            yellowModifier.setVisible(yellowGame);
             pikachu.setVisible(yellowGame);
         };
 
@@ -156,8 +154,8 @@ public final class SlotsSelectorPanel extends JPanel {
         detailsPanel.add(onBikeCheck);
         detailsPanel.add(leadLabel);
         detailsPanel.add(leadLevelSpinner);
-        detailsPanel.add(yellowModifierLabel);
-        detailsPanel.add(yellowModifier);
+        detailsPanel.add(modifierLabel);
+        detailsPanel.add(modifier);
         detailsPanel.add(pikachu);
         detailsPanel.getAccessibleContext().setAccessibleName("Detailed settings");
 
