@@ -18,6 +18,7 @@ repositories {
 
 dependencies {
     implementation 'com.formdev:flatlaf:3.5.4'
+    implementation("com.github.kwhat:jnativehook:2.2.2")
 }
 
 tasks.named('test') {

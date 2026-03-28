@@ -4,6 +4,11 @@ import com.com.poke.rng.dsum.audio.OverlapHumPlayer;
 import com.com.poke.rng.dsum.constants.EncounterSlot;
 import com.com.poke.rng.dsum.model.EncounterWheelModel;
 import com.com.poke.rng.dsum.util.Triplet;
+import com.github.kwhat.jnativehook.GlobalScreen;
+import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.dispatcher.SwingDispatchService;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,7 +16,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.function.Consumer;
 
-public final class EncounterWheelController {
+public final class EncounterWheelController implements NativeKeyListener {
 
     private static final int TIMER_MS = 16;
     /** Quiet period after changing target slots or finishing calibration (no encounters yet). */
@@ -47,6 +52,14 @@ public final class EncounterWheelController {
         this.repaintTargets = repaintTargets.clone();
         this.humPlayer = humPlayer;
         this.onSuggestedChange = onSuggestedChange;
+
+        GlobalScreen.setEventDispatcher(new SwingDispatchService());
+        try {
+            GlobalScreen.registerNativeHook();
+        } catch (final NativeHookException nhEx) {
+            throw new RuntimeException(nhEx);
+        }
+        GlobalScreen.addNativeKeyListener(this);
     }
 
     public void setSoundMuted(final boolean muted) {
@@ -77,8 +90,6 @@ public final class EncounterWheelController {
             c.setFocusable(true);
         }
 
-        installGlobalHotKeys();
-
         final Timer timer = new Timer(TIMER_MS, e -> {
             model.update(System.nanoTime());
             updateWarningBeeps();
@@ -91,85 +102,49 @@ public final class EncounterWheelController {
         timer.start();
     }
 
-    /**
-     * Runs before the focused component (combo box, spinner, etc.) sees the key, so Space and other game keys
-     * still work while UI controls retain focus.
-     */
-    private void installGlobalHotKeys() {
-        final Window win = SwingUtilities.getWindowAncestor(repaintTargets[0]);
-        if (win == null) {
+    @Override
+    public void nativeKeyPressed(final NativeKeyEvent e) {
+        final int ex = e.getModifiers();
+        if ((ex & (InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK)) != 0) {
             return;
         }
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
-            if (e.getID() != KeyEvent.KEY_PRESSED) {
-                return false;
-            }
-            final KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-            final Window keyWin = kfm.getFocusedWindow();
-            if (keyWin == null || !windowOwnedByOrIs(keyWin, win)) {
-                return false;
-            }
-            final Component focus = kfm.getFocusOwner();
-            if (focus instanceof JTextArea && ((JTextArea) focus).isEditable()) {
-                return false;
-            }
 
-            final int ex = e.getModifiersEx();
-            if ((ex & (InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK)) != 0) {
-                return false;
+        final boolean ctrl = (ex & InputEvent.CTRL_DOWN_MASK) != 0;
+        final boolean shift = (ex & InputEvent.SHIFT_DOWN_MASK) != 0;
+
+        switch (e.getRawCode()) {
+            case KeyEvent.VK_SPACE -> {
+                model.battleStart(shift);
             }
-
-            final boolean ctrl = (ex & InputEvent.CTRL_DOWN_MASK) != 0;
-            final boolean shift = (ex & InputEvent.SHIFT_DOWN_MASK) != 0;
-
-            return switch (e.getKeyCode()) {
-                case KeyEvent.VK_SPACE -> {
-                    model.battleStart(shift);
-                    e.consume();
-                    yield true;
+            case KeyEvent.VK_0, KeyEvent.VK_1, KeyEvent.VK_2, KeyEvent.VK_3, KeyEvent.VK_4,
+                 KeyEvent.VK_5, KeyEvent.VK_6, KeyEvent.VK_7, KeyEvent.VK_8, KeyEvent.VK_9 -> {
+                if (shift) {
+                    return;
                 }
-                case KeyEvent.VK_0, KeyEvent.VK_1, KeyEvent.VK_2, KeyEvent.VK_3, KeyEvent.VK_4,
-                        KeyEvent.VK_5, KeyEvent.VK_6, KeyEvent.VK_7, KeyEvent.VK_8, KeyEvent.VK_9 -> {
-                    if (shift) {
-                        yield false;
-                    }
-                    final int slot = e.getKeyCode() == KeyEvent.VK_0 ? 10 : e.getKeyCode() - KeyEvent.VK_0;
-                    final boolean wasCalibrating = model.isCalibrating();
-                    model.calibrateSlot(slot, ctrl);
-                    if (wasCalibrating) {
-                        notePostConfiguration();
-                    }
-                    e.consume();
-                    yield true;
+                final int slot = e.getRawCode() == KeyEvent.VK_0 ? 10 : e.getRawCode() - KeyEvent.VK_0;
+                final boolean wasCalibrating = model.isCalibrating();
+                model.calibrateSlot(slot, ctrl);
+                if (wasCalibrating) {
+                    notePostConfiguration();
                 }
-                case KeyEvent.VK_MINUS -> {
-                    model.uncertaintyDelta(false);
-                    e.consume();
-                    yield true;
-                }
-                case KeyEvent.VK_EQUALS -> {
-                    model.uncertaintyDelta(true);
-                    e.consume();
-                    yield true;
-                }
-                case KeyEvent.VK_OPEN_BRACKET -> {
-                    model.manualAngle(false);
-                    e.consume();
-                    yield true;
-                }
-                case KeyEvent.VK_CLOSE_BRACKET -> {
-                    model.manualAngle(true);
-                    e.consume();
-                    yield true;
-                }
-                case KeyEvent.VK_DELETE -> {
-                    model.clearCalibrationState(System.nanoTime());
-                    e.consume();
-                    yield true;
-                }
-                default -> false;
-            };
-        });
+            }
+            case KeyEvent.VK_MINUS -> {
+                model.uncertaintyDelta(false);
+            }
+            case KeyEvent.VK_EQUALS -> {
+                model.uncertaintyDelta(true);
+            }
+            case KeyEvent.VK_OPEN_BRACKET -> {
+                model.manualAngle(false);
+            }
+            case KeyEvent.VK_CLOSE_BRACKET -> {
+                model.manualAngle(true);
+            }
+            case KeyEvent.VK_DELETE -> {
+                model.clearCalibrationState(System.nanoTime());
+            }
+            default -> {}
+        }
     }
 
     private void updateWarningBeeps() {

@@ -15,7 +15,7 @@ public class EncounterWheelModel {
 
     // Red/Blue:
     // Average number of frames for one DSum cycle out of battle (counting down).
-    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 373.8214286;
+    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 372.221374;
     // Average number of frames for one DSum cycle in battle (counting up).
     private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.84;
 
