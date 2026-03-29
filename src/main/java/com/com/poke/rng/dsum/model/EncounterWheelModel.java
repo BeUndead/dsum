@@ -18,7 +18,7 @@ public class EncounterWheelModel {
     // Average number of frames for one DSum cycle out of battle (counting down).
     private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 372.221374;
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.2149837;
+    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 775.1083333;
 
     // Number of frames which the in-battle DSum cycle runs before the spiral battle entry animation ends.
     private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 100;
@@ -101,6 +101,12 @@ public class EncounterWheelModel {
     private volatile int leadLevel = 70;
 
     /**
+     * Suggested slots only: step-lag frames from {@link OverworldMovementMode#suggestionStepLagFrames()} (vs
+     * {@link #SUGGESTION_LEAD_GAMEBOY_FRAMES} forward).
+     */
+    private volatile OverworldMovementMode overworldMovementMode = OverworldMovementMode.BIKE;
+
+    /**
      * Count-up frames assumed at {@link #battleStart(boolean)} ({@code #COUNT_UP_BEFORE_*}) — used to retro-correct
      * calibration when actual animation length differed (see wild vs. lead level).
      */
@@ -109,7 +115,8 @@ public class EncounterWheelModel {
     private long overworldStartTime = System.nanoTime();
     private long lastNow = overworldStartTime;
     private double angleDeg = 0.0;
-    private double manualAngleOffsetDeltaDeg = 0.0;
+    private double manualAngleOffsetDeltaDeg = (overworldMovementMode.suggestionStepLagFrames())
+            * ONE_FRAME_NS / overworldCycleNs() * 360.0;;
 
     private long battleEnterTime = -1;
     private Triplet<Integer, Integer, Integer> rangeAtBattleStart = null;
@@ -131,12 +138,6 @@ public class EncounterWheelModel {
     private boolean warningBeepPending;
 
     private boolean pikaLead = true;
-
-    /**
-     * Suggested slots only: step-lag frames from {@link OverworldMovementMode#suggestionStepLagFrames()} (vs
-     * {@link #SUGGESTION_LEAD_GAMEBOY_FRAMES} forward).
-     */
-    private volatile OverworldMovementMode overworldMovementMode = OverworldMovementMode.BIKE;
 
     private Game game;
 
@@ -168,7 +169,10 @@ public class EncounterWheelModel {
     }
 
     public void setOverworldMovementMode(final OverworldMovementMode mode) {
+        final OverworldMovementMode oldMode = overworldMovementMode;
         overworldMovementMode = Objects.requireNonNull(mode);
+        this.manualAngleOffsetDeltaDeg = (oldMode.suggestionStepLagFrames() - overworldMovementMode.suggestionStepLagFrames())
+                * ONE_FRAME_NS / overworldCycleNs() * 360.0;
     }
 
     public OverworldMovementMode getOverworldMovementMode() {
