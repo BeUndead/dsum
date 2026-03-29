@@ -17,16 +17,16 @@ import java.awt.*;
 
 public final class ApplicationFrame extends JFrame {
 
-    private JPanel themeAppearanceChip;
-    private JPanel viewLayoutChip;
-    private JPanel centerHost;
-    private JPanel rootContent;
-    private JLabel viewLabel;
-    private SlotsDisplayPanel slotsDisplayPanel;
-    private SlotsSelectorPanel slotsSelectorPanel;
-    private EncounterWheel wheel;
-    private EncounterWheelBar wheelBar;
-    private EncounterWheelController wheelController;
+    private final JPanel themeAppearanceChip;
+    private final JPanel viewLayoutChip;
+    private final JPanel centerHost;
+    private final JPanel rootContent;
+    private final JLabel viewLabel;
+    private final SlotsDisplayPanel slotsDisplayPanel;
+    private final SlotsSelectorPanel slotsSelectorPanel;
+    private final EncounterWheel wheel;
+    private final EncounterWheelBar wheelBar;
+    private final EncounterWheelController wheelController;
 
     public ApplicationFrame() {
         final Game initialGame = Game.RED;

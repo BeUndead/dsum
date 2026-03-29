@@ -602,14 +602,7 @@ public class EncounterWheelModel {
      * Calibrating: {@link #getDsumRangeAtStartOfBattle()}.
      */
     public Triplet<Integer, Integer, Integer> getDsumRangeForSuggestedSlots() {
-        if (isCalibrating()) {
-            return getDsumRangeAtStartOfBattle();
-        }
-        final double overworldNs = overworldCycleNs();
-        final double perFrameDeg = -(ONE_FRAME_NS / overworldNs) * 360.0;
-        final double angleOffset =
-                (SUGGESTION_LEAD_GAMEBOY_FRAMES - overworldMovementMode.suggestionStepLagFrames()) * perFrameDeg;
-        return getDsumRange(angleOffset);
+        return getDsumRangeAtStartOfBattle();
     }
 
     public Triplet<Integer, Integer, Integer> getDsumRangeAtStartOfBattle() {
