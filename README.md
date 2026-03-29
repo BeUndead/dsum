@@ -3,12 +3,14 @@
 This is a first pass at making a visual DSum timer application, which can be used
 live while playing the game (rather than pre-calculated charts).
 
+![app-running.png](images/app-running.png)
+
 ## Usage
 
 There are 2 videos:
 
-1. Yellow (catching Pidgeotto) [here](https://drive.google.com/file/d/1z5Q3yE7RRjrLV01ZeNj4sZCCd5W_POTn/view?usp=sharing)
-2. Red (catching Scyther / Chansey) [here](https://drive.google.com/file/d/10rm5AnlR5OPHUpbm7NOsEQ2mCx04gw7C/view?usp=sharing)
+1. [Golduck in Seafoam](https://drive.google.com/file/d/1S16nG32QZo3U0_6VtadeCOWIxV48cy1U/view?usp=sharing)
+2. [Pikachu in Forest](https://drive.google.com/file/d/10hQiSj7v5NSRKDpKphSjmGEtevBbQhkx/view?usp=sharing)
 
 These show the basic use of the application.
 
