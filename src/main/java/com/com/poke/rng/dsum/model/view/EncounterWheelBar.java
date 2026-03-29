@@ -98,6 +98,7 @@ public final class EncounterWheelBar extends JPanel {
         drawTicks(g2, translate, periodPx, w, tickTop, bandY, tight);
         drawSlotStrip(g2, translate, periodPx, w, bandY, bandH);
         drawSuggestedOverlay(g2, translate, periodPx, w, bandY, bandH);
+        drawTargetSlotsOverlay(g2, translate, periodPx, w, bandY, bandH);
         drawUncertaintyBand(g2, translate, periodPx, w, bandY, bandH);
         if (!tight) {
             drawSlotLabels(g2, translate, periodPx, w, bandY + bandH + 2);
@@ -209,19 +210,13 @@ public final class EncounterWheelBar extends JPanel {
         final int likeliestIndex = t.second().ordinal();
         final int end = t.third().ordinal();
         final int n = EncounterSlot.values().length;
-        final boolean overlap = model.targetOverlapsUncertainty();
-        final double oPortion = model.getTargetUncertaintyOverlapPortionOfSlot();
         final Composite oldC = g.getComposite();
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.32f));
 
         int idx = firstIndex;
         while (true) {
-            if (overlap) {
-                g.setColor(DsumEncounterPaint.overlapStrengthGreen(115, 235, 125, 42, 185, 62, oPortion));
-            } else {
-                final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
-                g.setColor(SuggestionStyle.amberSuggestionFillOpaque(d));
-            }
+            final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
+            g.setColor(SuggestionStyle.amberSuggestionFillOpaque(d));
             final EncounterSlot slot = EncounterSlot.values()[idx];
             final double x0 = translate + (slot.min() / (double) DSUM_RANGE) * periodPx;
             final double x1 = translate + ((slot.max() + 1) / (double) DSUM_RANGE) * periodPx;
@@ -243,12 +238,8 @@ public final class EncounterWheelBar extends JPanel {
         g.setStroke(new BasicStroke(1.5f));
         idx = firstIndex;
         while (true) {
-            if (overlap) {
-                g.setColor(DsumEncounterPaint.overlapStrengthGreen(28, 135, 55, 8, 95, 28, oPortion, 185, 240));
-            } else {
-                final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
-                g.setColor(SuggestionStyle.amberSuggestionStroke(d));
-            }
+            final int segD = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
+            g.setColor(SuggestionStyle.amberSuggestionStroke(segD));
             final EncounterSlot slot = EncounterSlot.values()[idx];
             final double x0 = translate + (slot.min() / (double) DSUM_RANGE) * periodPx;
             final double x1 = translate + ((slot.max() + 1) / (double) DSUM_RANGE) * periodPx;
@@ -265,6 +256,54 @@ public final class EncounterWheelBar extends JPanel {
                 break;
             }
             idx = (idx + 1) % n;
+        }
+    }
+
+    /** Green band on target slot(s) above the amber suggestion overlay. */
+    private void drawTargetSlotsOverlay(
+            final Graphics2D g,
+            final double translate,
+            final double periodPx,
+            final int viewW,
+            final int bandY,
+            final int bandH) {
+        if (model.getTargetSlots().isEmpty()) {
+            return;
+        }
+        final boolean overlap = model.targetOverlapsUncertainty();
+        final double oBlend = overlap ? model.getTargetUncertaintyOverlapPortionOfSlot() : 1.0;
+        final Composite oldC = g.getComposite();
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, overlap ? 0.38f : 0.42f));
+
+        for (final EncounterSlot slot : model.getTargetSlots()) {
+            final double x0 = translate + (slot.min() / (double) DSUM_RANGE) * periodPx;
+            final double x1 = translate + ((slot.max() + 1) / (double) DSUM_RANGE) * periodPx;
+            g.setColor(DsumEncounterPaint.overlapStrengthGreen(115, 235, 125, 42, 185, 62, oBlend));
+            for (int k = -3; k <= 3; k++) {
+                final int ix0 = (int) Math.floor(x0 + k * periodPx);
+                final int ix1 = (int) Math.ceil(x1 + k * periodPx);
+                final int clipL = Math.max(0, ix0);
+                final int clipR = Math.min(viewW, ix1);
+                if (clipR > clipL) {
+                    g.fillRect(clipL, bandY - 2, clipR - clipL, bandH + 4);
+                }
+            }
+        }
+        g.setComposite(oldC);
+        g.setStroke(new BasicStroke(1.5f));
+        for (final EncounterSlot slot : model.getTargetSlots()) {
+            final double x0 = translate + (slot.min() / (double) DSUM_RANGE) * periodPx;
+            final double x1 = translate + ((slot.max() + 1) / (double) DSUM_RANGE) * periodPx;
+            g.setColor(DsumEncounterPaint.overlapStrengthGreen(28, 135, 55, 8, 95, 28, oBlend, 185, 240));
+            for (int k = -3; k <= 3; k++) {
+                final int ix0 = (int) Math.floor(x0 + k * periodPx);
+                final int ix1 = (int) Math.ceil(x1 + k * periodPx);
+                final int clipL = Math.max(0, ix0);
+                final int clipR = Math.min(viewW, ix1);
+                if (clipR > clipL) {
+                    g.drawRect(clipL, bandY - 2, clipR - clipL, bandH + 3);
+                }
+            }
         }
     }
 

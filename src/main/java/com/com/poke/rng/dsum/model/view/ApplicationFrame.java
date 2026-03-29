@@ -12,7 +12,6 @@ import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
 import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 public final class ApplicationFrame extends JFrame {
@@ -24,6 +23,9 @@ public final class ApplicationFrame extends JFrame {
     private final JLabel viewLabel;
     private final SlotsDisplayPanel slotsDisplayPanel;
     private final SlotsSelectorPanel slotsSelectorPanel;
+    private final RouteSettingsBlindsHandle routeControlsHandle;
+
+    private boolean routeControlsExpanded = true;
     private final EncounterWheel wheel;
     private final EncounterWheelBar wheelBar;
     private final EncounterWheelController wheelController;
@@ -61,27 +63,106 @@ public final class ApplicationFrame extends JFrame {
                 model::modifyYellowOverworldDsumCycleModifier,
                 model::setLeadLevel,
                 wheelController::setSoundMuted,
-                model::setOverworldMovementMode
+                model::setOverworldMovementMode,
+                wheelController::requestCalibrationSurfaceFocus
         );
 
+        final LeadingToolbarParts leadingToolbar = buildLeadingToolbar();
+        viewLabel = leadingToolbar.viewLabel();
+        viewLayoutChip = leadingToolbar.viewLayoutChip();
+        themeAppearanceChip = leadingToolbar.themeAppearanceChip();
+        slotsSelectorPanel.addLeadingToolbar(leadingToolbar.toolbarRow());
+        // Single child so preferred height is not max(wheel, bar) — CardLayout would keep 500×500 with the bar.
+        centerHost = new JPanel(new BorderLayout());
+        centerHost.setOpaque(false);
+        centerHost.add(wheel, BorderLayout.CENTER);
+
+        rootContent = new JPanel(new BorderLayout());
+        rootContent.setOpaque(true);
+        rootContent.setBackground(UiTheme.SURFACE_ALT);
+        final Border pad = BorderFactory.createEmptyBorder(12, 16, 16, 16);
+        rootContent.setBorder(pad);
+
+        routeControlsHandle = new RouteSettingsBlindsHandle(this::toggleRouteControlsExpansion);
+
+        final JPanel routeControlsBundle = new JPanel();
+        routeControlsBundle.setLayout(new BoxLayout(routeControlsBundle, BoxLayout.Y_AXIS));
+        routeControlsBundle.setOpaque(false);
+        routeControlsBundle.add(slotsSelectorPanel);
+
+        final JPanel handleRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 3));
+        handleRow.setOpaque(false);
+        handleRow.add(routeControlsHandle);
+        routeControlsBundle.add(handleRow);
+
+        final JPanel slots = new JPanel(new BorderLayout());
+        slots.setOpaque(false);
+        slots.add(routeControlsBundle, BorderLayout.NORTH);
+        slots.add(slotsDisplayPanel, BorderLayout.SOUTH);
+        rootContent.add(slots, BorderLayout.NORTH);
+        rootContent.add(centerHost, BorderLayout.CENTER);
+
+        add(rootContent);
+
+        setTitle("DSum");
+        pack();
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationByPlatform(true);
+
+        setIconImage(SpriteImageUtil.loadWithTransparentBackground(getClass()
+                .getResource("/sprites/rb/27.png")).getImage());
+
+        SwingUtilities.invokeLater(wheel::requestFocusInWindow);
+        wheelController.start();
+    }
+
+    private void toggleRouteControlsExpansion() {
+        routeControlsExpanded = !routeControlsExpanded;
+        slotsSelectorPanel.setVisible(routeControlsExpanded);
+        routeControlsHandle.setExpanded(routeControlsExpanded);
+        slotsSelectorPanel.getParent().revalidate();
+        SwingUtilities.invokeLater(this::pack);
+    }
+
+    private void applyAppearance(final UiTheme.Appearance appearance) {
+        if (UiTheme.getAppearance() == appearance) {
+            return;
+        }
+        UiTheme.install(appearance);
+        SwingUtilities.updateComponentTreeUI(this);
+        rootContent.setBackground(UiTheme.SURFACE_ALT);
+        viewLabel.setForeground(UiTheme.TEXT_MUTED);
+        themeAppearanceChip.setBackground(UiTheme.SURFACE_ALT);
+        viewLayoutChip.setBackground(UiTheme.SURFACE_ALT);
+        wheel.setBackground(UiTheme.SURFACE);
+        wheelBar.setBackground(UiTheme.SURFACE);
+        routeControlsHandle.repaint();
+        slotsSelectorPanel.applyUiThemeColors();
+        slotsDisplayPanel.applyUiThemeColors();
+        repaintToolbarIconSubtree(themeAppearanceChip);
+        repaintToolbarIconSubtree(viewLayoutChip);
+        repaint();
+    }
+
+    private record LeadingToolbarParts(
+            JPanel toolbarRow,
+            JLabel viewLabel,
+            JPanel viewLayoutChip,
+            JPanel themeAppearanceChip) {}
+
+    private LeadingToolbarParts buildLeadingToolbar() {
         final JPanel viewPick = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         viewPick.setOpaque(false);
-        viewLabel = new JLabel("View:");
+        final JLabel viewLabel = new JLabel("View:");
         viewLabel.setForeground(UiTheme.TEXT_MUTED);
         viewPick.add(viewLabel);
 
-        viewLayoutChip = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        viewLayoutChip.setOpaque(true);
-        viewLayoutChip.setBackground(UiTheme.SURFACE_ALT);
-        viewLayoutChip.putClientProperty(FlatClientProperties.STYLE, "arc: 10");
-        viewLayoutChip.setBorder(new EmptyBorder(4, 6, 4, 6));
+        final JPanel viewLayoutChip = ToolbarSegmentedControl.newChip();
         final ButtonGroup viewLayoutGroup = new ButtonGroup();
         final JToggleButton viewFull = new JToggleButton(new ViewLayoutIcon(ViewLayoutIcon.Kind.FULL));
         final JToggleButton viewCompact = new JToggleButton(new ViewLayoutIcon(ViewLayoutIcon.Kind.COMPACT));
         for (final JToggleButton tb : new JToggleButton[] {viewFull, viewCompact}) {
-            tb.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-            tb.setFocusable(false);
-            tb.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+            ToolbarSegmentedControl.styleIconToggle(tb);
         }
         viewFull.setToolTipText("Full view — large encounter wheel");
         viewFull.getAccessibleContext().setAccessibleName("Full view");
@@ -104,18 +185,12 @@ public final class ApplicationFrame extends JFrame {
         });
         viewPick.add(viewLayoutChip);
 
-        themeAppearanceChip = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        themeAppearanceChip.setOpaque(true);
-        themeAppearanceChip.setBackground(UiTheme.SURFACE_ALT);
-        themeAppearanceChip.putClientProperty(FlatClientProperties.STYLE, "arc: 10");
-        themeAppearanceChip.setBorder(new EmptyBorder(4, 6, 4, 6));
+        final JPanel themeAppearanceChip = ToolbarSegmentedControl.newChip();
         final ButtonGroup appearanceGroup = new ButtonGroup();
         final JToggleButton appearanceLight = new JToggleButton(new ThemeAppearanceIcon(ThemeAppearanceIcon.Kind.SUN));
         final JToggleButton appearanceDark = new JToggleButton(new ThemeAppearanceIcon(ThemeAppearanceIcon.Kind.MOON));
         for (final JToggleButton tb : new JToggleButton[] {appearanceLight, appearanceDark}) {
-            tb.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-            tb.setFocusable(false);
-            tb.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+            ToolbarSegmentedControl.styleIconToggle(tb);
         }
         appearanceLight.setToolTipText("Light appearance");
         appearanceLight.getAccessibleContext().setAccessibleName("Light appearance");
@@ -144,11 +219,10 @@ public final class ApplicationFrame extends JFrame {
         final JToggleButton backgroundInputToggle = new JToggleButton("Background");
         backgroundInputToggle.setSelected(false);
         backgroundInputToggle.setFont(backgroundInputToggle.getFont().deriveFont(Font.PLAIN, 12f));
-        backgroundInputToggle.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-        backgroundInputToggle.setFocusable(false);
+        ToolbarSegmentedControl.styleIconToggle(backgroundInputToggle);
         backgroundInputToggle.setToolTipText(
                 "When on, space and calibration keys work even when this window is not focused. "
-                        + "When off, keys only work while the wheel or strip has focus.");
+                        + "When off, keys are handled on the main window unless typing in a field or a menu is open.");
         backgroundInputToggle.getAccessibleContext().setAccessibleName("Background key capture");
         backgroundInputToggle.addActionListener(e -> {
             final boolean on = backgroundInputToggle.isSelected();
@@ -164,68 +238,19 @@ public final class ApplicationFrame extends JFrame {
             }
         });
 
-        final JPanel viewChrome = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        viewChrome.setOpaque(false);
-        viewChrome.add(viewPick);
-        viewChrome.add(themeAppearanceChip);
-        viewChrome.add(backgroundInputToggle);
-        slotsSelectorPanel.addLeadingToolbar(viewChrome);
-        // Single child so preferred height is not max(wheel, bar) — CardLayout would keep 500×500 with the bar.
-        centerHost = new JPanel(new BorderLayout());
-        centerHost.setOpaque(false);
-        centerHost.add(wheel, BorderLayout.CENTER);
-
-        rootContent = new JPanel(new BorderLayout());
-        rootContent.setOpaque(true);
-        rootContent.setBackground(UiTheme.SURFACE_ALT);
-        final Border pad = BorderFactory.createEmptyBorder(12, 16, 16, 16);
-        rootContent.setBorder(pad);
-
-        final JPanel slots = new JPanel(new BorderLayout());
-        slots.setOpaque(false);
-        slots.add(slotsDisplayPanel, BorderLayout.SOUTH);
-        slots.add(slotsSelectorPanel, BorderLayout.NORTH);
-        rootContent.add(slots, BorderLayout.NORTH);
-        rootContent.add(centerHost, BorderLayout.CENTER);
-
-        add(rootContent);
-
-        setTitle("DSum");
-        pack();
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationByPlatform(true);
-
-        setIconImage(SpriteImageUtil.loadWithTransparentBackground(getClass()
-                .getResource("/sprites/rb/27.png")).getImage());
-
-        SwingUtilities.invokeLater(wheel::requestFocusInWindow);
-        wheelController.start();
+        final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        row.setOpaque(false);
+        row.add(viewPick);
+        row.add(themeAppearanceChip);
+        row.add(backgroundInputToggle);
+        return new LeadingToolbarParts(row, viewLabel, viewLayoutChip, themeAppearanceChip);
     }
 
-    private void applyAppearance(final UiTheme.Appearance appearance) {
-        if (UiTheme.getAppearance() == appearance) {
-            return;
-        }
-        UiTheme.install(appearance);
-        SwingUtilities.updateComponentTreeUI(this);
-        rootContent.setBackground(UiTheme.SURFACE_ALT);
-        viewLabel.setForeground(UiTheme.TEXT_MUTED);
-        themeAppearanceChip.setBackground(UiTheme.SURFACE_ALT);
-        viewLayoutChip.setBackground(UiTheme.SURFACE_ALT);
-        wheel.setBackground(UiTheme.SURFACE);
-        wheelBar.setBackground(UiTheme.SURFACE);
-        slotsSelectorPanel.applyUiThemeColors();
-        slotsDisplayPanel.applyUiThemeColors();
-        repaintThemeToolbarIcons(themeAppearanceChip);
-        repaintThemeToolbarIcons(viewLayoutChip);
-        repaint();
-    }
-
-    private static void repaintThemeToolbarIcons(final Container root) {
+    private static void repaintToolbarIconSubtree(final Container root) {
         for (final Component c : root.getComponents()) {
             c.repaint();
             if (c instanceof Container co) {
-                repaintThemeToolbarIcons(co);
+                repaintToolbarIconSubtree(co);
             }
         }
     }

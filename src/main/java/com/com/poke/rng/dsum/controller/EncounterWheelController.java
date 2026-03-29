@@ -11,11 +11,9 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 
 import javax.swing.*;
+import javax.swing.text.JTextComponent;
 import java.awt.*;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.util.function.Consumer;
 
 public final class EncounterWheelController implements NativeKeyListener {
@@ -42,17 +40,18 @@ public final class EncounterWheelController implements NativeKeyListener {
     private double lastApproachBarProgress = -1;
 
     /**
-     * When false (default), keys are handled via Swing on the wheel / bar when they have focus.
+     * When false (default), calibration keys are handled via a {@link KeyboardFocusManager} dispatcher
+     * for the main window (except editable fields and open popup menus).
      * When true, JNativeHook captures keys globally (works when another app is focused).
      */
     private boolean globalHookActive;
 
-    private final KeyListener swingKeyListener = new KeyAdapter() {
-        @Override
-        public void keyPressed(final KeyEvent e) {
-            handleKeyCommand(e.getKeyCode(), e.getModifiersEx());
-        }
-    };
+    /** Main host window for foreground dispatch; modal dialogs use a different focused window and are excluded. */
+    private Window calibrationRootWindow;
+
+    private KeyEventDispatcher swingWindowKeyDispatcher;
+
+    private final CalibrationKeyboard calibrationKeys;
 
     public EncounterWheelController(
             final EncounterWheelModel model,
@@ -67,10 +66,11 @@ public final class EncounterWheelController implements NativeKeyListener {
         this.repaintTargets = repaintTargets.clone();
         this.humPlayer = humPlayer;
         this.onSuggestedChange = onSuggestedChange;
+        this.calibrationKeys = new CalibrationKeyboard(model, this::notePostConfiguration);
     }
 
     /**
-     * Exactly one path is active: global native capture or per-component Swing listeners on the wheel / bar.
+     * Exactly one path is active: global native capture or foreground {@link KeyEventDispatcher} on the main window.
      *
      * @throws RuntimeException if enabling background capture but the native hook could not be registered
      */
@@ -79,22 +79,20 @@ public final class EncounterWheelController implements NativeKeyListener {
             return;
         }
         if (enabled) {
-            // Background: drop Swing listeners first so keys are not handled twice once the hook runs.
-            detachSwingKeyListeners();
+            detachForegroundSwingInput();
             unregisterNativeKeyboardCapture();
             try {
                 registerNativeKeyboardCapture();
                 globalHookActive = true;
             } catch (final RuntimeException ex) {
-                attachSwingKeyListeners();
+                attachForegroundSwingInput();
                 globalHookActive = false;
                 throw ex;
             }
         } else {
-            // Swing: tear down native capture completely, then attach listeners.
             unregisterNativeKeyboardCapture();
-            detachSwingKeyListeners();
-            attachSwingKeyListeners();
+            detachForegroundSwingInput();
+            attachForegroundSwingInput();
             globalHookActive = false;
         }
     }
@@ -129,18 +127,72 @@ public final class EncounterWheelController implements NativeKeyListener {
         }
     }
 
-    private void attachSwingKeyListeners() {
-        for (final JComponent c : repaintTargets) {
-            c.removeKeyListener(swingKeyListener);
-            c.addKeyListener(swingKeyListener);
+    /**
+     * Foreground (non-native) mode: listen for calibration keys anywhere in the main window except text entry
+     * and popup lists (e.g. combo dropdowns).
+     */
+    private void attachForegroundSwingInput() {
+        calibrationRootWindow = SwingUtilities.getWindowAncestor(repaintTargets[0]);
+        if (calibrationRootWindow == null || swingWindowKeyDispatcher != null) {
+            return;
+        }
+        swingWindowKeyDispatcher = this::dispatchCalibrationKeyWhenForegroundSwing;
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(swingWindowKeyDispatcher);
+    }
+
+    private void detachForegroundSwingInput() {
+        if (swingWindowKeyDispatcher != null) {
+            KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(swingWindowKeyDispatcher);
+            swingWindowKeyDispatcher = null;
         }
     }
 
-    /** Remove Swing key handling from wheel / bar (used when switching to background capture). */
-    private void detachSwingKeyListeners() {
-        for (final JComponent c : repaintTargets) {
-            c.removeKeyListener(swingKeyListener);
+    /**
+     * Move keyboard focus to the visible wheel or strip so arrow/tab affordances are consistent after UI picks.
+     * Does nothing in background (native) mode.
+     */
+    public void requestCalibrationSurfaceFocus() {
+        if (globalHookActive) {
+            return;
         }
+        for (final JComponent c : repaintTargets) {
+            if (c.isDisplayable() && c.isShowing()) {
+                SwingUtilities.invokeLater(c::requestFocusInWindow);
+                return;
+            }
+        }
+    }
+
+    /**
+     * @return {@code true} if the event should not be dispatched further (handled as calibration input)
+     */
+    private boolean dispatchCalibrationKeyWhenForegroundSwing(final KeyEvent e) {
+        if (globalHookActive) {
+            return false;
+        }
+        if (e.getID() != KeyEvent.KEY_PRESSED) {
+            return false;
+        }
+        final KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        if (calibrationRootWindow == null || kfm.getFocusedWindow() != calibrationRootWindow) {
+            return false;
+        }
+        final Component focusOwner = kfm.getFocusOwner();
+        if (focusOwner == null) {
+            return false;
+        }
+        if (focusOwner instanceof JTextComponent jt && jt.isEditable()) {
+            return false;
+        }
+        if (SwingUtilities.getAncestorOfClass(JPopupMenu.class, focusOwner) != null) {
+            return false;
+        }
+        if (!CalibrationKeyboard.isCalibrationKey(e.getKeyCode())) {
+            return false;
+        }
+        calibrationKeys.handleKeyCommand(e.getKeyCode(), e.getModifiersEx());
+        e.consume();
+        return true;
     }
 
     public void setSoundMuted(final boolean muted) {
@@ -170,7 +222,7 @@ public final class EncounterWheelController implements NativeKeyListener {
         for (final JComponent c : repaintTargets) {
             c.setFocusable(true);
         }
-        attachSwingKeyListeners();
+        attachForegroundSwingInput();
 
         final Timer timer = new Timer(TIMER_MS, e -> {
             model.update(System.nanoTime());
@@ -186,50 +238,7 @@ public final class EncounterWheelController implements NativeKeyListener {
 
     @Override
     public void nativeKeyPressed(final NativeKeyEvent e) {
-        handleKeyCommand(e.getRawCode(), e.getModifiers());
-    }
-
-    private void handleKeyCommand(final int keyCode, final int modifiersEx) {
-        if ((modifiersEx & (InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK)) != 0) {
-            return;
-        }
-
-        final boolean ctrl = (modifiersEx & InputEvent.CTRL_DOWN_MASK) != 0;
-        final boolean shift = (modifiersEx & InputEvent.SHIFT_DOWN_MASK) != 0;
-
-        switch (keyCode) {
-            case KeyEvent.VK_SPACE -> {
-                model.battleStart(shift);
-            }
-            case KeyEvent.VK_0, KeyEvent.VK_1, KeyEvent.VK_2, KeyEvent.VK_3, KeyEvent.VK_4,
-                 KeyEvent.VK_5, KeyEvent.VK_6, KeyEvent.VK_7, KeyEvent.VK_8, KeyEvent.VK_9 -> {
-                if (shift) {
-                    return;
-                }
-                final int slot = keyCode == KeyEvent.VK_0 ? 10 : keyCode - KeyEvent.VK_0;
-                final boolean wasCalibrating = model.isCalibrating();
-                model.calibrateSlot(slot, ctrl);
-                if (wasCalibrating) {
-                    notePostConfiguration();
-                }
-            }
-            case KeyEvent.VK_MINUS -> {
-                model.uncertaintyDelta(false);
-            }
-            case KeyEvent.VK_EQUALS -> {
-                model.uncertaintyDelta(true);
-            }
-            case KeyEvent.VK_OPEN_BRACKET -> {
-                model.manualAngle(false);
-            }
-            case KeyEvent.VK_CLOSE_BRACKET -> {
-                model.manualAngle(true);
-            }
-            case KeyEvent.VK_DELETE -> {
-                model.clearCalibrationState(System.nanoTime());
-            }
-            default -> {}
-        }
+        calibrationKeys.handleKeyCommand(e.getRawCode(), e.getModifiers());
     }
 
     private void updateWarningBeeps() {
@@ -316,15 +325,5 @@ public final class EncounterWheelController implements NativeKeyListener {
             onSuggestedChange.accept(newSuggested);
         }
         suggestedSlots = newSuggested;
-    }
-
-    /** True if {@code w} is {@code appRoot} or is owned (directly or indirectly) by {@code appRoot}. */
-    private static boolean windowOwnedByOrIs(final Window w, final Window appRoot) {
-        for (Window x = w; x != null; x = x.getOwner()) {
-            if (x == appRoot) {
-                return true;
-            }
-        }
-        return false;
     }
 }

@@ -43,7 +43,8 @@ public final class SlotsSelectorPanel extends JPanel {
             final Consumer<Integer> onModifierChanged,
             final Consumer<Integer> onLeadLevelChanged,
             final Consumer<Boolean> onSoundMutedChanged,
-            final Consumer<OverworldMovementMode> onMovementModeChanged) {
+            final Consumer<OverworldMovementMode> onMovementModeChanged,
+            final Runnable onRefocusCalibrationSurface) {
 
         modifierLabel = new JLabel("Mod:");
         final JSpinner modifier = new JSpinner();
@@ -97,13 +98,17 @@ public final class SlotsSelectorPanel extends JPanel {
                 routesCombo.removeItem(Route.SURFING);
                 routesCombo.addItem(Route.SURFING);
             }
+            SwingUtilities.invokeLater(onRefocusCalibrationSurface);
         });
 
         routesCombo.setSelectedItem(route);
         routesCombo.setRenderer(new RenamingListCellRenderer<>(r -> " " + r.name().replace("_", " ")));
         routesCombo.putClientProperty(FlatClientProperties.STYLE_CLASS, "compact");
         routesCombo.setPreferredSize(new Dimension(200, 32));
-        routesCombo.addActionListener(e -> onRouteChanged.accept((Route) routesCombo.getSelectedItem()));
+        routesCombo.addActionListener(e -> {
+            onRouteChanged.accept((Route) routesCombo.getSelectedItem());
+            SwingUtilities.invokeLater(onRefocusCalibrationSurface);
+        });
 
         soundMute = new JToggleButton();
         soundMute.setIcon(new VolumeToolbarIcon(false));

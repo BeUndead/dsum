@@ -138,6 +138,7 @@ public final class EncounterWheel extends JPanel {
         g2.rotate(Math.toRadians(model.getDisplayAngleDeg()), cx, cy);
         drawSlots(g2, cx, cy);
         drawSuggestedRangeHighlight(g2, cx, cy);
+        drawTargetSlotsHighlight(g2, cx, cy);
         g2.setTransform(old);
         drawSlotLabels(g2, cx, cy);
 
@@ -185,8 +186,6 @@ public final class EncounterWheel extends JPanel {
         final int likeliestIndex = t.second().ordinal();
         final int end = t.third().ordinal();
         final int n = EncounterSlot.values().length;
-        final boolean overlap = model.targetOverlapsUncertainty();
-        final double oPortion = model.getTargetUncertaintyOverlapPortionOfSlot();
 
         final Composite oldC = g.getComposite();
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.32f));
@@ -199,12 +198,8 @@ public final class EncounterWheel extends JPanel {
             final Shape slice =
                     createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6),
                             startDeg, extentDeg, false);
-            if (overlap) {
-                g.setColor(DsumEncounterPaint.overlapStrengthGreen(115, 235, 125, 42, 185, 62, oPortion));
-            } else {
-                final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
-                g.setColor(SuggestionStyle.amberSuggestionFillOpaque(d));
-            }
+            final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
+            g.setColor(SuggestionStyle.amberSuggestionFillOpaque(d));
             g.fill(slice);
             if (idx == end) {
                 break;
@@ -223,17 +218,48 @@ public final class EncounterWheel extends JPanel {
             final Shape slice =
                     createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6),
                             startDeg, extentDeg, false);
-            if (overlap) {
-                g.setColor(DsumEncounterPaint.overlapStrengthGreen(28, 135, 55, 8, 95, 28, oPortion, 185, 240));
-            } else {
-                final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
-                g.setColor(SuggestionStyle.amberSuggestionStroke(d));
-            }
+            final int segD = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
+            g.setColor(SuggestionStyle.amberSuggestionStroke(segD));
             g.draw(slice);
             if (idx == end) {
                 break;
             }
             idx = (idx + 1) % n;
+        }
+    }
+
+    /** Green ring highlight on configured target slot(s), drawn above the amber suggestion band. */
+    private void drawTargetSlotsHighlight(final Graphics2D g, final int cx, final int cy) {
+        if (model.getTargetSlots().isEmpty()) {
+            return;
+        }
+        final boolean overlap = model.targetOverlapsUncertainty();
+        final double oBlend = overlap ? model.getTargetUncertaintyOverlapPortionOfSlot() : 1.0;
+
+        final Composite oldC = g.getComposite();
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, overlap ? 0.38f : 0.42f));
+        for (final EncounterSlot slot : model.getTargetSlots()) {
+            final int width = slot.max() - slot.min() + 1;
+            final double startDeg = (slot.min() / (double) DSUM_RANGE) * 360 + 90;
+            final double extentDeg = (width / (double) DSUM_RANGE) * 360;
+            final Shape slice =
+                    createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6),
+                            startDeg, extentDeg, false);
+            g.setColor(DsumEncounterPaint.overlapStrengthGreen(115, 235, 125, 42, 185, 62, oBlend));
+            g.fill(slice);
+        }
+        g.setComposite(oldC);
+
+        g.setStroke(new BasicStroke(gsf(2f)));
+        for (final EncounterSlot slot : model.getTargetSlots()) {
+            final int width = slot.max() - slot.min() + 1;
+            final double startDeg = (slot.min() / (double) DSUM_RANGE) * 360 + 90;
+            final double extentDeg = (width / (double) DSUM_RANGE) * 360;
+            final Shape slice =
+                    createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6),
+                            startDeg, extentDeg, false);
+            g.setColor(DsumEncounterPaint.overlapStrengthGreen(28, 135, 55, 8, 95, 28, oBlend, 185, 240));
+            g.draw(slice);
         }
     }
 

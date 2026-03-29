@@ -165,10 +165,6 @@ public class EncounterWheelModel {
                 * ONE_FRAME_NS / overworldCycleNs() * 360.0;
     }
 
-    public OverworldMovementMode getOverworldMovementMode() {
-        return overworldMovementMode;
-    }
-
     public void modifyYellowOverworldDsumCycleModifier(final double newModifier) {
         if (game == Game.YELLOW) {
             overworldDsumCycleModifier = -newModifier;
