@@ -72,12 +72,6 @@ public class EncounterWheelModel {
     public static final double OFFSET_STEP_DEG = 3.0;
 
     /**
-     * Suggested-slot min / center / max use {@link #getDsumRange(double)} as if {@link #angleDeg} had stepped forward
-     * this many Game Boy overworld frames (same °/frame as {@link #update} out of battle).
-     */
-    private static final int SUGGESTION_LEAD_GAMEBOY_FRAMES = 7;
-
-    /**
      * Wedge widens by this many degrees on each side for each full in-battle wheel rotation (360° at in-battle rate);
      * total added width is twice this (e.g. 1.5 rotations → 4.5°/side → 9° total).
      */
@@ -100,10 +94,6 @@ public class EncounterWheelModel {
     /** Party lead level; used with route to infer alternate battle animation when calibrating. */
     private volatile int leadLevel = 70;
 
-    /**
-     * Suggested slots only: step-lag frames from {@link OverworldMovementMode#suggestionStepLagFrames()} (vs
-     * {@link #SUGGESTION_LEAD_GAMEBOY_FRAMES} forward).
-     */
     private volatile OverworldMovementMode overworldMovementMode = OverworldMovementMode.BIKE;
 
     /**
@@ -290,8 +280,9 @@ public class EncounterWheelModel {
         // Encounter slot is rolled while DSum is still stepping at overworld speed for a few frames; unwind that
         // from the in-battle-based angleDelta (same overworld rate as incorrectDownAngle above).
         final double overworldLagDeg =
-                (ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES * ONE_FRAME_NS / overworldNs) * 360.0;
-        rangeAtBattleStart = getDsumRange(angleDelta - overworldLagDeg);
+                ((ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES + 25 + overworldMovementMode.suggestionStepLagFrames())
+                        * ONE_FRAME_NS / overworldNs) * 360.0;
+         rangeAtBattleStart = getDsumRange(angleDelta - overworldLagDeg);
 
         angleDeg += correction;
         refreshTargetOverlapApproachProgress();
@@ -602,7 +593,10 @@ public class EncounterWheelModel {
      * Calibrating: {@link #getDsumRangeAtStartOfBattle()}.
      */
     public Triplet<Integer, Integer, Integer> getDsumRangeForSuggestedSlots() {
-        return getDsumRangeAtStartOfBattle();
+        if (isCalibrating()) {
+            return getDsumRangeAtStartOfBattle();
+        }
+        return getDsumRange(0);
     }
 
     public Triplet<Integer, Integer, Integer> getDsumRangeAtStartOfBattle() {
