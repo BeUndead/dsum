@@ -80,16 +80,16 @@ public class EncounterWheelModel {
     /** Over this lead time (seconds), the approach bar ramps from empty to full. */
     private static final double TARGET_OVERLAP_WARN_NS = 2e9;
 
-    private List<EncounterSlot> targetSlots;
+    private volatile List<EncounterSlot> targetSlots;
 
-    private Runnable onTargetSlotsChanged;
+    private volatile Runnable onTargetSlotsChanged;
 
     private volatile Triplet<EncounterSlot, EncounterSlot, EncounterSlot> suggestedSlots;
 
-    private boolean isBlinds = false;
+    private volatile boolean isBlinds = false;
 
     /** Route for encounter metadata (e.g. wild level when calibrating alt animation). */
-    private Route route;
+    private volatile Route route;
 
     /** Party lead level; used with route to infer alternate battle animation when calibrating. */
     private volatile int leadLevel = 70;
@@ -100,36 +100,36 @@ public class EncounterWheelModel {
      * Count-up frames assumed at {@link #battleStart(boolean)} ({@code #COUNT_UP_BEFORE_*}) — used to retro-correct
      * calibration when actual animation length differed (see wild vs. lead level).
      */
-    private long assumedBattleAnimationFrames = COUNT_UP_BEFORE_SPIRAL_END_FRAMES;
+    private volatile long assumedBattleAnimationFrames = COUNT_UP_BEFORE_SPIRAL_END_FRAMES;
 
-    private long overworldStartTime = System.nanoTime();
-    private long lastNow = overworldStartTime;
-    private double angleDeg = 0.0;
-    private double manualAngleOffsetDeltaDeg = (overworldMovementMode.suggestionStepLagFrames())
-            * ONE_FRAME_NS / overworldCycleNs() * 360.0;;
+    private volatile long overworldStartTime = System.nanoTime();
+    private volatile long lastNow = overworldStartTime;
+    private volatile double angleDeg = 0.0;
+    private volatile double manualAngleOffsetDeltaDeg = (overworldMovementMode.suggestionStepLagFrames())
+            * ONE_FRAME_NS / overworldCycleNs() * 360.0;
 
-    private long battleEnterTime = -1;
+    private volatile long battleEnterTime = -1;
     private Triplet<Integer, Integer, Integer> rangeAtBattleStart = null;
 
-    private EncounterSlot calibratedSlot;
+    private volatile EncounterSlot calibratedSlot;
     /** Manual wedge tweak via hotkeys ({@link #uncertaintyDelta}). */
-    private double uncertaintyWedgeExtentDeltaDeg;
+    private volatile double uncertaintyWedgeExtentDeltaDeg;
     /** Extra wedge width (total °) from in-battle rotations; see {@link #uncertaintyWedgeExtraDegForInBattleAngle}. */
-    private double uncertaintyBattleGrowthDeg;
+    private volatile double uncertaintyBattleGrowthDeg;
 
     /** Cached in {@link #refreshTargetOverlapApproachProgress()} — not in paint (too expensive). */
-    private double targetOverlapApproachProgress;
+    private volatile double targetOverlapApproachProgress;
 
     /**
      * When a target ∩ wedge: max over target slots of (overlap arc ° ÷ target slot arc °), 0…1 (not in paint).
      */
-    private double targetUncertaintyOverlapPortionOfSlot;
+    private volatile double targetUncertaintyOverlapPortionOfSlot;
 
-    private boolean warningBeepPending;
+    private volatile boolean warningBeepPending;
 
-    private boolean pikaLead = true;
+    private volatile boolean pikaLead = true;
 
-    private Game game;
+    private volatile Game game;
 
     public EncounterWheelModel(final EncounterSlot targetSlot, final Game game) {
         this.targetSlots = List.of(targetSlot);

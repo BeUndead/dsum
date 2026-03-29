@@ -24,10 +24,10 @@ public final class SlotsSelectorPanel extends JPanel {
     private final boolean[] detailsExpanded = {false};
     private boolean compactChrome;
 
-    private JLabel modifierLabel;
-    private JLabel leadLabel;
-    private JCheckBox pikachu;
-    private JToggleButton soundMute;
+    private final JLabel modifierLabel;
+    private final JLabel leadLabel;
+    private final JCheckBox pikachu;
+    private final JToggleButton soundMute;
     private JLabel movementModeLabel;
     private JPanel movementModeChip;
 
@@ -333,31 +333,25 @@ public final class SlotsSelectorPanel extends JPanel {
         d.setVisible(true);
     }
 
-    private static final class RenamingListCellRenderer<T> implements ListCellRenderer<T> {
-
-        private final Function<T, String> renamer;
-
-        private RenamingListCellRenderer(final Function<T, String> renamer) {
-            this.renamer = renamer;
-        }
+    private record RenamingListCellRenderer<T>(Function<T, String> renamer) implements ListCellRenderer<T> {
 
         @Override
-        public Component getListCellRendererComponent(final JList<? extends T> list,
-                                                      final T value,
-                                                      final int index,
-                                                      final boolean isSelected,
-                                                      final boolean cellHasFocus) {
-            final String valueString = value == null ? "" : renamer.apply(value);
-            final JLabel label = new JLabel(valueString);
-            label.setOpaque(true);
-            if (isSelected) {
-                label.setBackground(list.getSelectionBackground());
-                label.setForeground(list.getSelectionForeground());
-            } else {
-                label.setBackground(list.getBackground());
-                label.setForeground(list.getForeground());
+            public Component getListCellRendererComponent(final JList<? extends T> list,
+                                                          final T value,
+                                                          final int index,
+                                                          final boolean isSelected,
+                                                          final boolean cellHasFocus) {
+                final String valueString = value == null ? "" : renamer.apply(value);
+                final JLabel label = new JLabel(valueString);
+                label.setOpaque(true);
+                if (isSelected) {
+                    label.setBackground(list.getSelectionBackground());
+                    label.setForeground(list.getSelectionForeground());
+                } else {
+                    label.setBackground(list.getBackground());
+                    label.setForeground(list.getForeground());
+                }
+                return label;
             }
-            return label;
         }
-    }
 }

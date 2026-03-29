@@ -24,7 +24,7 @@ public class CompoundIcon implements Icon
     {
         X_AXIS,
         Y_AXIS,
-        Z_AXIS;
+        Z_AXIS
     }
 
     public final static float TOP = 0.0f;
@@ -33,13 +33,13 @@ public class CompoundIcon implements Icon
     public final static float BOTTOM = 1.0f;
     public final static float RIGHT = 1.0f;
 
-    private Icon[] icons;
+    private final Icon[] icons;
     private Rectangle[] bounds;
-    private HashMap<Component, Point> iconOffset = new HashMap<Component, Point>();
+    private final HashMap<Component, Point> iconOffset = new HashMap<Component, Point>();
 
-    private Axis axis;
+    private final Axis axis;
 
-    private int gap;
+    private final int gap;
 
     private float alignmentX = CENTER;
     private float alignmentY = CENTER;
@@ -215,9 +215,8 @@ public class CompoundIcon implements Icon
                 //  Recursively invoke this method, this time with a null
                 //  component, since the offset has been recalculated.
 
-                if (icon instanceof CompoundIcon)
+                if (icon instanceof CompoundIcon compound)
                 {
-                    CompoundIcon compound = (CompoundIcon)icon;
                     return compound.getIconInfoAtPoint(new Point(point.x - r.x, point.y - r.y), null);
                 }
                 else
@@ -253,9 +252,8 @@ public class CompoundIcon implements Icon
         {
             Rectangle r = bounds[i];
 
-            if (icons[i] instanceof CompoundIcon)
+            if (icons[i] instanceof CompoundIcon compound)
             {
-                CompoundIcon compound = (CompoundIcon)icons[i];
                 compound.getIconInfo(list, new Point(offset.x + r.x, offset.y + r.y));
             }
             else
@@ -274,9 +272,9 @@ public class CompoundIcon implements Icon
      */
     static class IconInfo
     {
-        private Icon icon;
-        private Rectangle bounds;
-        private Point point;
+        private final Icon icon;
+        private final Rectangle bounds;
+        private final Point point;
 
         public IconInfo(Icon icon, Rectangle bounds, Point point)
         {

@@ -326,12 +326,7 @@ public class SlotsDisplayPanel extends JPanel {
         button.setIcon(icon);
     }
 
-    private static class SlotTile {
-        private final Encounter encounter;
-
-        private SlotTile(final Encounter encounter) {
-            this.encounter = encounter;
-        }
+    private record SlotTile(Encounter encounter) {
     }
 
     private static final class SpriteStorer {
