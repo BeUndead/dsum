@@ -52,13 +52,14 @@ public final class SlotsSelectorPanel extends JPanel {
         modifierLabel.setForeground(UiTheme.TEXT_MUTED);
         modifierLabel.setToolTipText("Overworld DSum cycle modifier");
 
-        final SpinnerNumberModel spinModel = new SpinnerNumberModel(0, -100, 100, 10);
+        final SpinnerNumberModel spinModel = new SpinnerNumberModel(0, -150, 100, 10);
         modifier.setModel(spinModel);
         modifier.addChangeListener(e -> onModifierChanged.accept((Integer) spinModel.getValue()));
         if (modifier.getEditor() instanceof JSpinner.NumberEditor editor) {
             editor.getTextField().setColumns(3);
         }
         modifier.setPreferredSize(new Dimension(76, 32));
+        modifier.setToolTipText("Change cycle length if you're seeming consistently ahead / behind (mostly Yellow)");
 
         pikachu = new JCheckBox();
         pikachu.setText("Pika lead");

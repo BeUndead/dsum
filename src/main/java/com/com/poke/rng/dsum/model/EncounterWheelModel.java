@@ -46,15 +46,15 @@ public class EncounterWheelModel {
     // Yellow:
     // Yellow's DSum is...  Interesting.
     // It can range anywhere from ~670 - 850 frames.  But once the count has been determined on a route, it
-    // won't change.  To account for this, we have a base rate of 700, and give the ability to increase or lower the
+    // won't change.  To account for this, we have a base rate of ~800, and give the ability to increase or lower the
     // cycle duration.  Sorry
-    private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE = -817.0;
+    private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE = -800.8647059;
 
     private volatile double overworldDsumCycleModifier = 0.0;
     private volatile double overworldDsumCycleModifierNs = 0.0;
 
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 794.325;
+    private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 781.6914894;
 
     // No count frames in yellow, since times are similar and go the same direction...
 
@@ -161,7 +161,8 @@ public class EncounterWheelModel {
     public void setOverworldMovementMode(final OverworldMovementMode mode) {
         final OverworldMovementMode oldMode = overworldMovementMode;
         overworldMovementMode = Objects.requireNonNull(mode);
-        this.manualAngleOffsetDeltaDeg = (oldMode.suggestionStepLagFrames() - overworldMovementMode.suggestionStepLagFrames())
+        final double plusMinus = game == Game.YELLOW ? -1.0 : 1.0;
+        this.manualAngleOffsetDeltaDeg = plusMinus * (oldMode.suggestionStepLagFrames() - overworldMovementMode.suggestionStepLagFrames())
                 * ONE_FRAME_NS / overworldCycleNs() * 360.0;
     }
 
@@ -542,7 +543,7 @@ public class EncounterWheelModel {
 
     /** Total ° to add to slot span from in-battle DSum rotation {@code battleAngleDeg} (linear in 360° turns). */
     private static double uncertaintyWedgeExtraDegForInBattleAngle(final double battleAngleDeg) {
-        final double rotations = battleAngleDeg / 360.0;
+        final double rotations = Math.abs(battleAngleDeg / 360.0);
         return 2.0 * UNCERTAINTY_WEDGE_DEGREES_DELTA_PER_ROTATION * rotations;
     }
 
