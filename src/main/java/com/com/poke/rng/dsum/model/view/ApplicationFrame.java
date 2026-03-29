@@ -7,6 +7,7 @@ import com.com.poke.rng.dsum.constants.Route;
 import com.com.poke.rng.dsum.controller.EncounterWheelController;
 import com.com.poke.rng.dsum.model.EncounterWheelModel;
 import com.com.poke.rng.dsum.model.OverworldMovementMode;
+import com.com.poke.rng.dsum.util.SpriteImageUtil;
 import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
@@ -193,6 +194,9 @@ public final class ApplicationFrame extends JFrame {
         pack();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationByPlatform(true);
+
+        setIconImage(SpriteImageUtil.loadWithTransparentBackground(getClass()
+                .getResource("/sprites/rb/27.png")).getImage());
 
         SwingUtilities.invokeLater(wheel::requestFocusInWindow);
         wheelController.start();
