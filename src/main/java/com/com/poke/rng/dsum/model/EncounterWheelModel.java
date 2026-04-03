@@ -105,8 +105,7 @@ public class EncounterWheelModel {
     private volatile long overworldStartTime = System.nanoTime();
     private volatile long lastNow = overworldStartTime;
     private volatile double angleDeg = 0.0;
-    private volatile double manualAngleOffsetDeltaDeg = (overworldMovementMode.suggestionStepLagFrames())
-            * ONE_FRAME_NS / overworldCycleNs() * 360.0;
+    private volatile double manualAngleOffsetDeltaDeg;
 
     private volatile long battleEnterTime = -1;
     private Triplet<Integer, Integer, Integer> rangeAtBattleStart = null;
@@ -159,11 +158,7 @@ public class EncounterWheelModel {
     }
 
     public void setOverworldMovementMode(final OverworldMovementMode mode) {
-        final OverworldMovementMode oldMode = overworldMovementMode;
         overworldMovementMode = Objects.requireNonNull(mode);
-        final double plusMinus = game == Game.YELLOW ? -1.0 : 1.0;
-        this.manualAngleOffsetDeltaDeg = plusMinus * (oldMode.suggestionStepLagFrames() - overworldMovementMode.suggestionStepLagFrames())
-                * ONE_FRAME_NS / overworldCycleNs() * 360.0;
     }
 
     public void modifyYellowOverworldDsumCycleModifier(final double newModifier) {
@@ -276,10 +271,11 @@ public class EncounterWheelModel {
         final double angleDelta = (fullDurationFrames * ONE_FRAME_NS) / inBattleNs * 360.0;
         // Encounter slot is rolled while DSum is still stepping at overworld speed for a few frames; unwind that
         // from the in-battle-based angleDelta (same overworld rate as incorrectDownAngle above).
+        // Movement step-lag (bike / walk / corner) is not applied here — suggested slots follow estimated DSum at
+        // encounter time ± wedge only; lag values remain UI reference for button timing.
         final double overworldLagDeg =
-                ((ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES + 25 + overworldMovementMode.suggestionStepLagFrames())
-                        * ONE_FRAME_NS / overworldNs) * 360.0;
-         rangeAtBattleStart = getDsumRange(angleDelta - overworldLagDeg);
+                ((ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES + 25) * ONE_FRAME_NS / overworldNs) * 360.0;
+        rangeAtBattleStart = getDsumRange(angleDelta - overworldLagDeg);
 
         angleDeg += correction;
         refreshTargetOverlapApproachProgress();
@@ -585,9 +581,9 @@ public class EncounterWheelModel {
     }
 
     /**
-     * DSum triple for suggested-slot UI only. Overworld: {@link #getDsumRange(double)} with angle offset
-     * {@code (lead − stepLag) ×} per-frame overworld ° (lead forward, step lag backward vs current {@link #angleDeg}).
-     * Calibrating: {@link #getDsumRangeAtStartOfBattle()}.
+     * DSum triple for suggested-slot UI only. Overworld: {@link #getDsumRange(double)} with offset 0 (live
+     * {@link #angleDeg}). Calibrating: {@link #getDsumRangeAtStartOfBattle()} from {@link #battleStart(boolean)}
+     * without movement step-lag — estimated encounter-time DSum spread, uncertainty wedge only.
      */
     public Triplet<Integer, Integer, Integer> getDsumRangeForSuggestedSlots() {
         if (isCalibrating()) {

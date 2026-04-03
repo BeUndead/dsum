@@ -204,7 +204,8 @@ public final class SlotsSelectorPanel extends JPanel {
         movementModeLabel = new JLabel("Move:");
         movementModeLabel.setForeground(UiTheme.TEXT_MUTED);
         movementModeLabel.setFont(movementModeLabel.getFont().deriveFont(Font.PLAIN, 12f));
-        movementModeLabel.setToolTipText("Overworld step type — affects suggested-slot timing only.");
+        movementModeLabel.setToolTipText(
+                "Reference step lag (0 / 9 / 17 frames) for your button timing — does not move the amber suggestion band.");
         row.add(movementModeLabel);
 
         final JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));

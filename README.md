@@ -75,7 +75,7 @@ Each column is one encounter table slot. Toggle **on** every slot you are willin
 
 ### Movement mode (Move: corner / bike / walk)
 
-This is the **overworld step type** you use between encounters. It only affects how the app predicts **which slot ranges are “suggested” next** after a battle (extra step-lag in frames: corner bonk **0**, bike **9**, walking **17**). Match it to how you actually move in-game so the **amber suggestion** band matches your spacing; it does **not** change the core Red/Blue overworld DSum rate.
+Picks which **step-lag reference** (corner **0**, bike **9**, walking **17** frames) is shown in tooltips—handy for when to press keys relative to your steps. It **does not** shift the **amber suggestion** band; suggestions follow the model’s estimated DSum at encounter / battle start and the uncertainty wedge, not bike-vs-walk offsets.
 
 ### Lead level
 
