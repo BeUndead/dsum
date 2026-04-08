@@ -41,8 +41,12 @@ public class SlotsDisplayPanel extends JPanel {
     private final List<JPanel> suggestionAmberBars = new ArrayList<>(10);
     private final List<SlotTile> tiles = new ArrayList<>();
 
+    private final Consumer<List<EncounterSlot>> onTargetsChanged;
+    private boolean suppressTargetCallbacks;
+
     public SlotsDisplayPanel(final Game game, final Route route, final EncounterSlot initialSlot,
                              final Consumer<List<EncounterSlot>> onTargetsChanged) {
+        this.onTargetsChanged = onTargetsChanged;
         this.game = game;
         this.route = route;
 
@@ -62,6 +66,9 @@ public class SlotsDisplayPanel extends JPanel {
                 toggle.setSelected(true);
             }
             toggle.addActionListener(e -> {
+                if (suppressTargetCallbacks) {
+                    return;
+                }
                 final List<EncounterSlot> newTargets = new ArrayList<>();
                 for (int j = 0; j < 10; j++) {
                     final JToggleButton b = buttons.get(j);
@@ -105,6 +112,24 @@ public class SlotsDisplayPanel extends JPanel {
 
         refreshToggleStyles();
         this.update();
+    }
+
+    /**
+     * Select target slots from code (e.g. presets) in one shot — one {@link #onTargetsChanged} call, no duplicate
+     * callbacks from toggle {@code setSelected}.
+     */
+    public void applyPresetTargets(final List<EncounterSlot> targets) {
+        final List<EncounterSlot> next = List.copyOf(targets);
+        suppressTargetCallbacks = true;
+        try {
+            for (int j = 0; j < 10; j++) {
+                buttons.get(j).setSelected(next.contains(EncounterSlot.values()[j]));
+            }
+            refreshToggleStyles();
+        } finally {
+            suppressTargetCallbacks = false;
+        }
+        onTargetsChanged.accept(next);
     }
 
     public void applyUiThemeColors() {

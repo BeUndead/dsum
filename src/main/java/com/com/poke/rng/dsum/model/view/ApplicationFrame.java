@@ -1,6 +1,7 @@
 package com.com.poke.rng.dsum.model.view;
 
 import com.com.poke.rng.dsum.audio.OverlapHumPlayer;
+import com.com.poke.rng.dsum.constants.DsumPreset;
 import com.com.poke.rng.dsum.constants.EncounterSlot;
 import com.com.poke.rng.dsum.constants.Game;
 import com.com.poke.rng.dsum.constants.Route;
@@ -13,6 +14,7 @@ import com.formdev.flatlaf.FlatClientProperties;
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
+import java.util.List;
 
 public final class ApplicationFrame extends JFrame {
 
@@ -64,7 +66,8 @@ public final class ApplicationFrame extends JFrame {
                 model::setLeadLevel,
                 wheelController::setSoundMuted,
                 model::setOverworldMovementMode,
-                wheelController::requestCalibrationSurfaceFocus
+                wheelController::requestCalibrationSurfaceFocus,
+                preset -> slotsDisplayPanel.applyPresetTargets(List.of(preset.targetSlot()))
         );
 
         final LeadingToolbarParts leadingToolbar = buildLeadingToolbar();
@@ -222,7 +225,8 @@ public final class ApplicationFrame extends JFrame {
         ToolbarSegmentedControl.styleIconToggle(backgroundInputToggle);
         backgroundInputToggle.setToolTipText(
                 "When on, space and calibration keys work even when this window is not focused. "
-                        + "When off, keys are handled on the main window unless typing in a field or a menu is open.");
+                        + "When off, keys are handled on the main window unless typing in a field or a menu is open. "
+                        + "P pauses / unpauses the wheel.");
         backgroundInputToggle.getAccessibleContext().setAccessibleName("Background key capture");
         backgroundInputToggle.addActionListener(e -> {
             final boolean on = backgroundInputToggle.isSelected();

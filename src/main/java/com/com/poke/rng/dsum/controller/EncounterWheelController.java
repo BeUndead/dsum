@@ -6,6 +6,7 @@ import com.com.poke.rng.dsum.model.EncounterWheelModel;
 import com.com.poke.rng.dsum.util.Triplet;
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.NativeInputEvent;
 import com.github.kwhat.jnativehook.dispatcher.SwingDispatchService;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
@@ -13,6 +14,7 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import javax.swing.*;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.function.Consumer;
 
@@ -35,9 +37,11 @@ public final class EncounterWheelController implements NativeKeyListener {
     private boolean userMuted;
     private long silenceUntilNs;
 
-    /** Bits 0…2 = milestone beeps at ~0%, ~33%, ~66% fill for the current approach cycle. */
+    /** Bits 0…2 = milestone beeps at start, ⅓ and ⅔ of the <em>remaining</em> time until overlap for this cycle. */
     private int approachBarBeepMask;
     private double lastApproachBarProgress = -1;
+    /** Remaining-ns snapshot when the current approach cycle began; used so thirds are even in wall time. */
+    private long approachTimeEntryNs = -1L;
 
     /**
      * When false (default), calibration keys are handled via a {@link KeyboardFocusManager} dispatcher
@@ -66,7 +70,7 @@ public final class EncounterWheelController implements NativeKeyListener {
         this.repaintTargets = repaintTargets.clone();
         this.humPlayer = humPlayer;
         this.onSuggestedChange = onSuggestedChange;
-        this.calibrationKeys = new CalibrationKeyboard(model, this::notePostConfiguration);
+        this.calibrationKeys = new CalibrationKeyboard(model, this::notePostConfiguration, this::requestRepaintTargets);
     }
 
     /**
@@ -182,7 +186,9 @@ public final class EncounterWheelController implements NativeKeyListener {
             return false;
         }
         if (focusOwner instanceof JTextComponent jt && jt.isEditable()) {
-            return false;
+            if (!allowCalibrationKeyBypassingEditableText(e)) {
+                return false;
+            }
         }
         if (SwingUtilities.getAncestorOfClass(JPopupMenu.class, focusOwner) != null) {
             return false;
@@ -192,7 +198,21 @@ public final class EncounterWheelController implements NativeKeyListener {
         }
         calibrationKeys.handleKeyCommand(e.getKeyCode(), e.getModifiersEx());
         e.consume();
+        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+            requestCalibrationSurfaceFocus();
+        }
         return true;
+    }
+
+    /**
+     * Spinner editors etc. use editable {@link JTextComponent}s; we still want Space→encounter from the main window.
+     * While already in battle, every calibration shortcut should work even if focus stayed in a numeric field.
+     */
+    private boolean allowCalibrationKeyBypassingEditableText(final KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_SPACE || e.getKeyCode() == KeyEvent.VK_P) {
+            return true;
+        }
+        return model.isCalibrating() && CalibrationKeyboard.isCalibrationKey(e.getKeyCode());
     }
 
     public void setSoundMuted(final boolean muted) {
@@ -212,6 +232,12 @@ public final class EncounterWheelController implements NativeKeyListener {
         humPlayer.stop();
         lastHumActive = false;
         approachBarBeepMask = 0;
+    }
+
+    private void requestRepaintTargets() {
+        for (final JComponent c : repaintTargets) {
+            c.repaint();
+        }
     }
 
     private boolean soundsAudible() {
@@ -238,7 +264,50 @@ public final class EncounterWheelController implements NativeKeyListener {
 
     @Override
     public void nativeKeyPressed(final NativeKeyEvent e) {
-        calibrationKeys.handleKeyCommand(e.getRawCode(), e.getModifiers());
+        calibrationKeys.handleKeyCommand(
+                swingKeyCodeFromNativeRaw(e.getRawCode()),
+                awtModifiersExFromNative(e.getModifiers()));
+    }
+
+    private static int awtModifiersExFromNative(final int nativeMods) {
+        int ex = 0;
+        if ((nativeMods & NativeInputEvent.SHIFT_MASK) != 0) {
+            ex |= InputEvent.SHIFT_DOWN_MASK;
+        }
+        if ((nativeMods & NativeInputEvent.CTRL_MASK) != 0) {
+            ex |= InputEvent.CTRL_DOWN_MASK;
+        }
+        if ((nativeMods & NativeInputEvent.META_MASK) != 0) {
+            ex |= InputEvent.META_DOWN_MASK;
+        }
+        if ((nativeMods & NativeInputEvent.ALT_MASK) != 0) {
+            ex |= InputEvent.ALT_DOWN_MASK;
+        }
+        return ex;
+    }
+
+    private static int swingKeyCodeFromNativeRaw(final int raw) {
+        return switch (raw) {
+            case NativeKeyEvent.VC_SPACE -> KeyEvent.VK_SPACE;
+            case NativeKeyEvent.VC_1 -> KeyEvent.VK_1;
+            case NativeKeyEvent.VC_2 -> KeyEvent.VK_2;
+            case NativeKeyEvent.VC_3 -> KeyEvent.VK_3;
+            case NativeKeyEvent.VC_4 -> KeyEvent.VK_4;
+            case NativeKeyEvent.VC_5 -> KeyEvent.VK_5;
+            case NativeKeyEvent.VC_6 -> KeyEvent.VK_6;
+            case NativeKeyEvent.VC_7 -> KeyEvent.VK_7;
+            case NativeKeyEvent.VC_8 -> KeyEvent.VK_8;
+            case NativeKeyEvent.VC_9 -> KeyEvent.VK_9;
+            case NativeKeyEvent.VC_0 -> KeyEvent.VK_0;
+            case NativeKeyEvent.VC_MINUS -> KeyEvent.VK_MINUS;
+            case NativeKeyEvent.VC_EQUALS -> KeyEvent.VK_EQUALS;
+            case NativeKeyEvent.VC_OPEN_BRACKET -> KeyEvent.VK_OPEN_BRACKET;
+            case NativeKeyEvent.VC_CLOSE_BRACKET -> KeyEvent.VK_CLOSE_BRACKET;
+            case NativeKeyEvent.VC_DELETE -> KeyEvent.VK_DELETE;
+            case NativeKeyEvent.VC_F2 -> KeyEvent.VK_F2;
+            case NativeKeyEvent.VC_P -> KeyEvent.VK_P;
+            default -> raw;
+        };
     }
 
     private void updateWarningBeeps() {
@@ -249,8 +318,10 @@ public final class EncounterWheelController implements NativeKeyListener {
     }
 
     /**
-     * Beeps at the start of fill (~0%), then at ⅓ and ⅔ of {@link EncounterWheelModel#getTargetOverlapApproachProgress()}
-     * while the bar is filling (amber phase). Resets if the bar recedes or is not shown.
+     * Beeps at approach start, then when remaining time crosses ⅔ and ⅓ of the time-to-overlap that was left at
+     * cycle start — equal thirds in real time. (Using {@link EncounterWheelModel#getTargetOverlapApproachProgress()}
+     * milestones would bunch beeps 1–2 when the bar first appears with p already past ⅓: progress is normalized
+     * against a fixed {@code TARGET_OVERLAP_WARN_NS}, not against “time left when we entered the warning”.)
      */
     private void updateApproachBarMilestoneBeeps() {
         final double p = model.getTargetOverlapApproachProgress();
@@ -260,39 +331,52 @@ public final class EncounterWheelController implements NativeKeyListener {
 
         if (barInactive || overlap) {
             approachBarBeepMask = 0;
+            approachTimeEntryNs = -1L;
+            lastApproachBarProgress = p;
+            return;
+        }
+
+        final long t = model.getTargetOverlapApproachTimeRemainingNs();
+        if (p <= 0 || t == Long.MAX_VALUE) {
+            approachBarBeepMask = 0;
+            approachTimeEntryNs = -1L;
             lastApproachBarProgress = p;
             return;
         }
 
         if (lastApproachBarProgress >= 0 && p < lastApproachBarProgress - 0.02) {
             approachBarBeepMask = 0;
+            approachTimeEntryNs = -1L;
         }
         lastApproachBarProgress = p;
 
-        final double oneThird = 1.0 / 3.0;
-        final double twoThirds = 2.0 / 3.0;
+        if (approachTimeEntryNs < 0L) {
+            approachTimeEntryNs = t;
+        }
+        final long t0 = approachTimeEntryNs;
+        final long beep2WhenTNotAbove = (long) (t0 * (2.0 / 3.0));
+        final long beep3WhenTNotAbove = (long) (t0 * (1.0 / 3.0));
+
         if (!soundsAudible()) {
-            if (p > 0) {
-                approachBarBeepMask |= 1 << 0;
-            }
-            if (p >= oneThird) {
+            approachBarBeepMask |= 1 << 0;
+            if (t <= beep2WhenTNotAbove) {
                 approachBarBeepMask |= 1 << 1;
             }
-            if (p >= twoThirds) {
+            if (t <= beep3WhenTNotAbove) {
                 approachBarBeepMask |= 1 << 2;
             }
             return;
         }
         final Toolkit tk = Toolkit.getDefaultToolkit();
-        if (p > 0 && (approachBarBeepMask & (1 << 0)) == 0) {
+        if ((approachBarBeepMask & (1 << 0)) == 0) {
             tk.beep();
             approachBarBeepMask |= 1 << 0;
         }
-        if (p >= oneThird && (approachBarBeepMask & (1 << 1)) == 0) {
+        if ((approachBarBeepMask & (1 << 1)) == 0 && t <= beep2WhenTNotAbove) {
             tk.beep();
             approachBarBeepMask |= 1 << 1;
         }
-        if (p >= twoThirds && (approachBarBeepMask & (1 << 2)) == 0) {
+        if ((approachBarBeepMask & (1 << 2)) == 0 && t <= beep3WhenTNotAbove) {
             tk.beep();
             approachBarBeepMask |= 1 << 2;
         }

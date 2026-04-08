@@ -155,24 +155,50 @@ public final class DsumEncounterPaint {
             final int panelWidth,
             final int panelHeight,
             final DsumReadoutMetrics m) {
+        paintDsumReadoutChip(g2, dsum, panelWidth, panelHeight, m, null);
+    }
+
+    /**
+     * @param chipFootnote optional second line under the value (e.g. uncalibrated hint); {@code null} for default chip
+     */
+    public static void paintDsumReadoutChip(
+            final Graphics2D g2,
+            final int dsum,
+            final int panelWidth,
+            final int panelHeight,
+            final DsumReadoutMetrics m,
+            final String chipFootnote) {
         final String cap = "DSum";
         final String val = Integer.toString(dsum);
         final Font base = g2.getFont();
         final Font capFont = base.deriveFont(Font.PLAIN, m.capFontPt);
         final Font valFont = base.deriveFont(Font.BOLD, m.valueFontPt);
         final Font tildeFont = base.deriveFont(Font.PLAIN, m.tildeFontPt);
+        final Font footFont =
+                chipFootnote == null || chipFootnote.isEmpty()
+                        ? null
+                        : base.deriveFont(Font.PLAIN, Math.max(8f, m.capFontPt * 0.72f));
         g2.setFont(capFont);
         final FontMetrics capFm = g2.getFontMetrics();
         g2.setFont(valFont);
         final FontMetrics valFm = g2.getFontMetrics();
         g2.setFont(tildeFont);
         final FontMetrics tildeFm = g2.getFontMetrics();
+        FontMetrics footFm = null;
+        int footW = 0;
+        if (footFont != null) {
+            g2.setFont(footFont);
+            footFm = g2.getFontMetrics();
+            footW = footFm.stringWidth(chipFootnote);
+        }
         final int capW = capFm.stringWidth(cap);
         final int tildeW = tildeFm.stringWidth("~");
         final int numW = valFm.stringWidth(val);
         final int valueRowW = tildeW + m.valueTildeGapPx + numW;
-        final int chipW = Math.max(capW, valueRowW) + m.pad * 2;
-        final int chipH = capFm.getHeight() + m.lineGap + valFm.getHeight() + m.pad * 2 - 2;
+        final int extraFootH =
+                footFm == null ? 0 : footFm.getHeight() + Math.max(1, m.lineGap - 1);
+        final int chipW = Math.max(Math.max(capW, valueRowW), footW) + m.pad * 2;
+        final int chipH = capFm.getHeight() + m.lineGap + valFm.getHeight() + m.pad * 2 - 2 + extraFootH;
         final int chipX = panelWidth - chipW - m.edgeMargin;
         final int chipY = panelHeight - chipH - m.edgeMargin;
         final Stroke oldStroke = g2.getStroke();
@@ -194,6 +220,58 @@ public final class DsumEncounterPaint {
         g2.setFont(valFont);
         g2.setColor(UiTheme.TEXT_PRIMARY);
         g2.drawString(val, vx, valueBaseline);
+        if (footFont != null && footFm != null) {
+            g2.setFont(footFont);
+            g2.setColor(UiTheme.TEXT_MUTED);
+            final float footBaseline = valueBaseline + valFm.getDescent() + Math.max(1, m.lineGap - 1) + footFm.getAscent();
+            g2.drawString(chipFootnote, chipX + (chipW - footW) / 2f, footBaseline);
+        }
+    }
+
+    /**
+     * Bottom-left hint chip (same chrome as DSum). {@code text} may contain {@code \\n} for wraps; skipped when
+     * {@code null} or empty.
+     */
+    public static void paintInstructionChip(
+            final Graphics2D g2,
+            final String text,
+            final int panelWidth,
+            final int panelHeight,
+            final DsumReadoutMetrics m) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        final String[] lines = text.split("\n", -1);
+        final Font base = g2.getFont();
+        final Font lineFont = base.deriveFont(Font.PLAIN, Math.max(9f, m.capFontPt * 0.92f));
+        g2.setFont(lineFont);
+        final FontMetrics fm = g2.getFontMetrics();
+        int maxLineW = 0;
+        for (final String line : lines) {
+            maxLineW = Math.max(maxLineW, fm.stringWidth(line));
+        }
+        final int innerLineGap = Math.max(1, m.lineGap);
+        final int chipW = maxLineW + m.pad * 2;
+        final int chipH = fm.getHeight() * lines.length + innerLineGap * (lines.length - 1) + m.pad * 2;
+        final int chipX = m.edgeMargin;
+        final int chipY = panelHeight - chipH - m.edgeMargin;
+        final Stroke oldStroke = g2.getStroke();
+        g2.setColor(UiTheme.CHIP_BG);
+        g2.fillRoundRect(chipX, chipY, chipW, chipH, m.cornerRadius, m.cornerRadius);
+        g2.setColor(UiTheme.CHIP_BORDER);
+        g2.setStroke(new BasicStroke(m.chipBorderStroke));
+        g2.drawRoundRect(chipX, chipY, chipW, chipH, m.cornerRadius, m.cornerRadius);
+        g2.setStroke(oldStroke);
+        g2.setFont(lineFont);
+        g2.setColor(UiTheme.TEXT_PRIMARY);
+        int lineY = chipY + m.pad + fm.getAscent();
+        for (int i = 0; i < lines.length; i++) {
+            g2.drawString(lines[i], chipX + m.pad, lineY);
+            lineY += fm.getHeight();
+            if (i < lines.length - 1) {
+                lineY += innerLineGap;
+            }
+        }
     }
 
     /**
