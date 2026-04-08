@@ -8,6 +8,7 @@ import com.com.poke.rng.dsum.util.Triplet;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.OptionalDouble;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Area;
@@ -39,7 +40,7 @@ public final class EncounterWheel extends JPanel {
     private static final float PULSE_BRIGHTNESS_AMOUNT = 1f;
 
     private final EncounterWheelModel model;
-    private double geomScale = DEFAULT_GEOM_SCALE;
+    private volatile double geomScale = DEFAULT_GEOM_SCALE;
 
     public EncounterWheel(final EncounterWheelModel model) {
         this(model, DEFAULT_GEOM_SCALE);
@@ -124,6 +125,16 @@ public final class EncounterWheel extends JPanel {
         final int cx = getWidth() / 2;
         final int cy = getHeight() / 2;
 
+        if (showUncalibratedSurfaceCue()) {
+            g2.setColor(UiTheme.UNCALIBRATED_SURFACE_WASH);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+        }
+
+        if (model.isCalibrating()) {
+            g2.setColor(UiTheme.CALIBRATING_SURFACE_WASH);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+        }
+
         if (model.targetOverlapsUncertainty()) {
             g2.setColor(UiTheme.overlapUncertaintyWash(model.getTargetUncertaintyOverlapPortionOfSlot()));
             g2.fillRect(0, 0, getWidth(), getHeight());
@@ -143,6 +154,7 @@ public final class EncounterWheel extends JPanel {
         drawSlotLabels(g2, cx, cy);
 
         drawUncertaintyWedge(g2, cx, cy);
+        drawSpaceEncounterPreviewWedgeScreen(g2, cx, cy);
         drawArrow(g2, cx, cy);
         drawText(g2);
     }
@@ -175,6 +187,38 @@ public final class EncounterWheel extends JPanel {
             g.setStroke(new BasicStroke(gsf(1f)));
             g.draw(slice);
         }
+    }
+
+    /**
+     * Debug (F2): estimated encounter band if Space were pressed now — drawn in <strong>screen</strong> space like
+     * {@link #drawUncertaintyWedge}, offset from the needle by the entry window’s in-battle angular span
+     * ({@link EncounterWheelModel#peekEncounterPreviewOffsetFromNeedleDeg}), not by integer DSum steps from the triplet
+     * center (near-current DSum → ~5°).
+     */
+    private void drawSpaceEncounterPreviewWedgeScreen(final Graphics2D g, final int cx, final int cy) {
+        if (!model.isSpaceEncounterPreviewVisible() || model.isCalibrating()) {
+            return;
+        }
+        final OptionalDouble offsetOpt = model.peekEncounterPreviewOffsetFromNeedleDeg(false);
+        if (offsetOpt.isEmpty()) {
+            return;
+        }
+        final double offsetDeg = offsetOpt.getAsDouble();
+        final double wedgeW = Math.max(0.35, model.getUncertaintyWedgeExtentDeg());
+        final double startDeg = 90 + offsetDeg - wedgeW / 2;
+
+        final Shape slice =
+                createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6), startDeg, wedgeW,
+                        false);
+        final Composite oldC = g.getComposite();
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+        g.setColor(UiTheme.DEBUG_SPACE_ENCOUNTER_FILL);
+        g.fill(slice);
+        g.setComposite(oldC);
+
+        g.setColor(UiTheme.DEBUG_SPACE_ENCOUNTER_STROKE);
+        g.setStroke(new BasicStroke(gsf(1.5f)));
+        g.draw(slice);
     }
 
     private void drawSuggestedRangeHighlight(final Graphics2D g, final int cx, final int cy) {
@@ -298,7 +342,7 @@ public final class EncounterWheel extends JPanel {
     }
 
     private void drawUncertaintyWedge(final Graphics2D g, final int cx, final int cy) {
-        if (model.getCalibratedSlot() == null && !model.isCalibrating()) {
+        if (model.getCalibratedSlot() == null || model.isCalibrating()) {
             return;
         }
 
@@ -310,7 +354,7 @@ public final class EncounterWheel extends JPanel {
         g.setColor(UiTheme.UNCERTAINTY_FILL);
         g.fill(wedge);
         g.setColor(UiTheme.UNCERTAINTY_STROKE);
-        g.setStroke(new BasicStroke(gsf(1f)));
+        g.setStroke(new BasicStroke(gsf(2f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g.draw(wedge);
     }
 
@@ -372,12 +416,20 @@ public final class EncounterWheel extends JPanel {
         return area;
     }
 
+    private boolean showUncalibratedSurfaceCue() {
+        return model.getCalibratedSlot() == null && !model.isCalibrating();
+    }
+
     private void drawText(final Graphics2D g) {
+        final DsumEncounterPaint.DsumReadoutMetrics m = DsumEncounterPaint.DsumReadoutMetrics.forWheel(geomScale);
+        DsumEncounterPaint.paintInstructionChip(
+                g, model.getDsumInstructionChipText(false), getWidth(), getHeight(), m);
         DsumEncounterPaint.paintDsumReadoutChip(
                 g,
                 model.getDsum(),
                 getWidth(),
                 getHeight(),
-                DsumEncounterPaint.DsumReadoutMetrics.forWheel(geomScale));
+                m,
+                model.getDsumChipStateFootnote(false));
     }
 }

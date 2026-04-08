@@ -16,8 +16,8 @@ public final class RouteSettingsBlindsHandle extends JComponent {
     private static final int DEF_W = 88;
     private static final int DEF_H = 24;
 
-    private boolean expanded = true;
-    private boolean hover = false;
+    private volatile boolean expanded = true;
+    private volatile boolean hover = false;
 
     public RouteSettingsBlindsHandle(final Runnable onActivate) {
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));

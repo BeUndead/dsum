@@ -75,7 +75,7 @@ Each column is one encounter table slot. Toggle **on** every slot you are willin
 
 ### Movement mode (Move: corner / bike / walk)
 
-Picks which **step-lag reference** (corner **0**, bike **9**, walking **17** frames) is shown in tooltips—handy for when to press keys relative to your steps. It **does not** shift the **amber suggestion** band; suggestions follow the model’s estimated DSum at encounter / battle start and the uncertainty wedge, not bike-vs-walk offsets.
+Picks **step lag after a step** (corner **0**, bike **9**, walking **17** frames): the **wheel ring** rotates by that much (relative to the live counter) so artwork lines up with when the step “finishes” on hardware. **Overlap tint, hum, approach bar, beeps, and amber suggestions** all follow the **live** DSum and wedge—no extra bike/walk delay in that logic.
 
 ### Lead level
 

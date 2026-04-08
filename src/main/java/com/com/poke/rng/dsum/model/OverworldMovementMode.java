@@ -2,8 +2,9 @@ package com.com.poke.rng.dsum.model;
 
 /**
  * Overworld movement style: canonical Game Boy frames after a step before that step fully “resolves” on the DSum
- * counter (corner bonk / bike / walk). Exposed for UI tooltips only — it does not shift {@link
- * com.com.poke.rng.dsum.model.EncounterWheelModel} suggested-slot ranges; those follow battle-start DSum ± wedge.
+ * counter (corner bonk / bike / walk). {@link #suggestionStepLagFrames()} rotates the encounter <em>wheel artwork</em>
+ * by that much (opposite active overworld rotation) so the ring matches post-step alignment; overlap / beeps / amber
+ * suggestions follow the live counter without that offset.
  */
 public enum OverworldMovementMode {
 
@@ -20,9 +21,7 @@ public enum OverworldMovementMode {
         this.referenceStepLagFrames = referenceStepLagFrames;
     }
 
-    /**
-     * Frames of step lag (reference for when to press relative to movement). Does not affect suggested-slot math.
-     */
+    /** Frames of step lag — drives visual wheel rotation in {@link com.com.poke.rng.dsum.model.EncounterWheelModel#getDisplayAngleDeg()}. */
     public int suggestionStepLagFrames() {
         return referenceStepLagFrames;
     }

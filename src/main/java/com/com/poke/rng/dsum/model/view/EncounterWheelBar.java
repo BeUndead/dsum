@@ -12,7 +12,8 @@ import java.awt.*;
 /**
  * Linear, horizontally wrapping view of the DSum cycle: the same slot colours as the wheel scroll sideways and
  * re-enter from the opposite edge. The needle is fixed at the horizontal centre; strip position follows
- * {@link EncounterWheelModel#getDisplayAngleDeg()} (same angle as the rotated wheel / {@link EncounterWheelModel#getAngleDeg()}).
+ * {@link EncounterWheelModel#getDisplayAngleDeg()} (continuous, not integer {@link EncounterWheelModel#getDsum()},
+ * so the strip scrolls smoothly — especially in battle where the cycle is slow and DSum steps are sparse).
  */
 public final class EncounterWheelBar extends JPanel {
 
@@ -25,6 +26,15 @@ public final class EncounterWheelBar extends JPanel {
     public static final int DEFAULT_PREFERRED_HEIGHT = 118;
 
     private static final int OVERLAP_BAR_W = 196;
+
+    /** Same cycle wrap as {@link EncounterWheelModel} DSum mapping; sub-step smooth scrolling for the strip. */
+    private static double needleCycleFraction(final double angleDeg) {
+        double a = angleDeg % 360.0;
+        if (a < 0.0) {
+            a += 360.0;
+        }
+        return a / 360.0;
+    }
 
     private final EncounterWheelModel model;
     private int stripWidth = 500;
@@ -72,6 +82,17 @@ public final class EncounterWheelBar extends JPanel {
         final int h = getHeight();
         final int cx = w / 2;
 
+        final boolean uncalibrated = model.getCalibratedSlot() == null && !model.isCalibrating();
+        if (uncalibrated) {
+            g2.setColor(UiTheme.UNCALIBRATED_SURFACE_WASH);
+            g2.fillRect(0, 0, w, h);
+        }
+
+        if (model.isCalibrating()) {
+            g2.setColor(UiTheme.CALIBRATING_SURFACE_WASH);
+            g2.fillRect(0, 0, w, h);
+        }
+
         if (model.targetOverlapsUncertainty()) {
             g2.setColor(UiTheme.overlapUncertaintyWash(model.getTargetUncertaintyOverlapPortionOfSlot()));
             g2.fillRect(0, 0, w, h);
@@ -79,6 +100,8 @@ public final class EncounterWheelBar extends JPanel {
 
         final boolean tight = h <= SlotsDisplayPanel.COMPACT_PREFERRED_HEIGHT + 6;
         int y = tight ? 2 : 6;
+        final String instructionText = model.getDsumInstructionChipText(tight);
+        final boolean showInstruction = instructionText != null && !instructionText.isEmpty();
         final boolean showApproach = model.getCalibratedSlot() != null && !model.getTargetSlots().isEmpty() && !model.isCalibrating();
         final int overlapBarH = showApproach
                 ? (tight ? Math.max(5, Math.min(8, h / 14)) : 11)
@@ -89,11 +112,10 @@ public final class EncounterWheelBar extends JPanel {
         final int tickH = tight ? 2 : Math.min(5, h / 18);
         final int tickTop = y;
         final int bandY = tickTop + tickH;
-        final int chipReserve = tight ? 30 : 48;
+        final int chipReserve = (tight ? 30 : 48) + (showInstruction ? (tight ? 16 : 10) : 0);
         final int bandH = Math.max(tight ? 16 : 22, h - bandY - chipReserve);
         final double periodPx = Math.max(w * 2.2, 560.0);
-        final int dNeedle = model.getDisplayDsum();
-        final double translate = cx - (dNeedle / (double) DSUM_RANGE) * periodPx;
+        final double translate = cx - needleCycleFraction(model.getDisplayAngleDeg()) * periodPx;
 
         drawTicks(g2, translate, periodPx, w, tickTop, bandY, tight);
         drawSlotStrip(g2, translate, periodPx, w, bandY, bandH);
@@ -104,12 +126,15 @@ public final class EncounterWheelBar extends JPanel {
             drawSlotLabels(g2, translate, periodPx, w, bandY + bandH + 2);
         }
         drawNeedle(g2, cx, bandY, tight);
+        final DsumEncounterPaint.DsumReadoutMetrics chipMetrics = DsumEncounterPaint.DsumReadoutMetrics.forBar(tight);
+        DsumEncounterPaint.paintInstructionChip(g2, instructionText, w, h, chipMetrics);
         DsumEncounterPaint.paintDsumReadoutChip(
                 g2,
                 model.getDsum(),
                 w,
                 h,
-                DsumEncounterPaint.DsumReadoutMetrics.forBar(tight));
+                chipMetrics,
+                model.getDsumChipStateFootnote(tight));
     }
 
     /** @return bottom Y of the countdown bar */
@@ -314,11 +339,11 @@ public final class EncounterWheelBar extends JPanel {
             final int viewW,
             final int bandY,
             final int bandH) {
-        if (model.getCalibratedSlot() == null && !model.isCalibrating()) {
+        if (model.getCalibratedSlot() == null || model.isCalibrating()) {
             return;
         }
         final double extentDeg = model.getUncertaintyWedgeExtentDeg();
-        final int dCenter = model.getDisplayDsum();
+        final double dCenter = needleCycleFraction(model.getDisplayAngleDeg()) * DSUM_RANGE;
         final double halfWd = (extentDeg / 360.0) * (DSUM_RANGE / 2.0);
         final double d0 = dCenter - halfWd;
         final double d1 = dCenter + halfWd;
@@ -335,7 +360,7 @@ public final class EncounterWheelBar extends JPanel {
             g.setColor(UiTheme.UNCERTAINTY_FILL);
             g.fillRect(clipL, bandY - 1, clipR - clipL, bandH + 2);
             g.setColor(UiTheme.UNCERTAINTY_STROKE);
-            g.setStroke(new BasicStroke(1f));
+            g.setStroke(new BasicStroke(1.75f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER));
             g.drawRect(clipL, bandY - 1, clipR - clipL, bandH + 1);
         }
     }

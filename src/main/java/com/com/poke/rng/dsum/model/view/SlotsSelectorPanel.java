@@ -1,5 +1,6 @@
 package com.com.poke.rng.dsum.model.view;
 
+import com.com.poke.rng.dsum.constants.DsumPreset;
 import com.com.poke.rng.dsum.constants.Game;
 import com.com.poke.rng.dsum.constants.Route;
 import com.com.poke.rng.dsum.model.OverworldMovementMode;
@@ -8,6 +9,9 @@ import com.formdev.flatlaf.FlatClientProperties;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -22,7 +26,7 @@ public final class SlotsSelectorPanel extends JPanel {
     private final JPanel detailsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
     private final JPanel mainRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
     private final boolean[] detailsExpanded = {false};
-    private boolean compactChrome;
+    private volatile boolean compactChrome;
 
     private final JLabel modifierLabel;
     private final JLabel leadLabel;
@@ -30,6 +34,17 @@ public final class SlotsSelectorPanel extends JPanel {
     private final JToggleButton soundMute;
     private JLabel movementModeLabel;
     private JPanel movementModeChip;
+    private final JToggleButton[] movementModeButtons = new JToggleButton[OverworldMovementMode.values().length];
+    private boolean suppressMovementCallbacks;
+
+    private final SpinnerNumberModel modifierModel;
+    private final SpinnerNumberModel leadModel;
+    private final JSpinner modifierSpinner;
+    private final JSpinner leadLevelSpinner;
+
+    private final Consumer<OverworldMovementMode> onMovementModeChanged;
+    private final Runnable onRefocusCalibrationSurface;
+    private final Consumer<DsumPreset> onPresetApplied;
 
     public SlotsSelectorPanel(
             final Game game,
@@ -44,22 +59,27 @@ public final class SlotsSelectorPanel extends JPanel {
             final Consumer<Integer> onLeadLevelChanged,
             final Consumer<Boolean> onSoundMutedChanged,
             final Consumer<OverworldMovementMode> onMovementModeChanged,
-            final Runnable onRefocusCalibrationSurface) {
+            final Runnable onRefocusCalibrationSurface,
+            final Consumer<DsumPreset> onPresetApplied) {
+
+        this.onMovementModeChanged = onMovementModeChanged;
+        this.onRefocusCalibrationSurface = onRefocusCalibrationSurface;
+        this.onPresetApplied = onPresetApplied;
 
         modifierLabel = new JLabel("Mod:");
-        final JSpinner modifier = new JSpinner();
-        modifierLabel.setLabelFor(modifier);
+        modifierSpinner = new JSpinner();
+        modifierLabel.setLabelFor(modifierSpinner);
         modifierLabel.setForeground(UiTheme.TEXT_MUTED);
         modifierLabel.setToolTipText("Overworld DSum cycle modifier");
 
-        final SpinnerNumberModel spinModel = new SpinnerNumberModel(0, -150, 100, 10);
-        modifier.setModel(spinModel);
-        modifier.addChangeListener(e -> onModifierChanged.accept((Integer) spinModel.getValue()));
-        if (modifier.getEditor() instanceof JSpinner.NumberEditor editor) {
+        modifierModel = new SpinnerNumberModel(0, -150, 100, 10);
+        modifierSpinner.setModel(modifierModel);
+        modifierSpinner.addChangeListener(e -> onModifierChanged.accept((Integer) modifierModel.getValue()));
+        if (modifierSpinner.getEditor() instanceof JSpinner.NumberEditor editor) {
             editor.getTextField().setColumns(3);
         }
-        modifier.setPreferredSize(new Dimension(76, 32));
-        modifier.setToolTipText("Change cycle length if you're seeming consistently ahead / behind (mostly Yellow)");
+        modifierSpinner.setPreferredSize(new Dimension(76, 32));
+        modifierSpinner.setToolTipText("Change cycle length if you're seeming consistently ahead / behind (mostly Yellow)");
 
         pikachu = new JCheckBox();
         pikachu.setText("Pika lead");
@@ -70,9 +90,9 @@ public final class SlotsSelectorPanel extends JPanel {
 
         leadLabel = new JLabel("Lead Lv:");
         leadLabel.setForeground(UiTheme.TEXT_MUTED);
-        final JSpinner leadLevelSpinner = new JSpinner();
+        leadLevelSpinner = new JSpinner();
         leadLabel.setLabelFor(leadLevelSpinner);
-        final SpinnerNumberModel leadModel = new SpinnerNumberModel(initialLeadLevel, 1, 100, 1);
+        leadModel = new SpinnerNumberModel(initialLeadLevel, 1, 100, 1);
         leadLevelSpinner.setModel(leadModel);
         leadLevelSpinner.addChangeListener(e -> onLeadLevelChanged.accept((Integer) leadModel.getValue()));
         if (leadLevelSpinner.getEditor() instanceof JSpinner.NumberEditor leadEditor) {
@@ -158,8 +178,21 @@ public final class SlotsSelectorPanel extends JPanel {
         detailsPanel.add(leadLabel);
         detailsPanel.add(leadLevelSpinner);
         detailsPanel.add(modifierLabel);
-        detailsPanel.add(modifier);
+        detailsPanel.add(modifierSpinner);
         detailsPanel.add(pikachu);
+
+        final JLabel presetsLink = new JLabel("Presets");
+        presetsLink.setForeground(UiTheme.ACCENT);
+        presetsLink.setFont(presetsLink.getFont().deriveFont(Font.PLAIN, 13f));
+        presetsLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        presetsLink.setToolTipText("Apply a bundled game / route / movement / slot setup");
+        presetsLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(final MouseEvent e) {
+                showPresetMenu(presetsLink);
+            }
+        });
+        detailsPanel.add(presetsLink);
         detailsPanel.getAccessibleContext().setAccessibleName("Detailed settings");
 
         detailsToggle.setForeground(UiTheme.ACCENT);
@@ -196,6 +229,40 @@ public final class SlotsSelectorPanel extends JPanel {
         onMovementModeChanged.accept(defaultMovementMode);
     }
 
+    private void showPresetMenu(final Component invoker) {
+        final JPopupMenu menu = new JPopupMenu();
+        for (final DsumPreset p : DsumPreset.values()) {
+            menu.add(new AbstractAction(p.menuLabel()) {
+                @Override
+                public void actionPerformed(final ActionEvent e) {
+                    applyPreset(p);
+                }
+            });
+        }
+        menu.show(invoker, 0, invoker.getHeight());
+    }
+
+    private void applyPreset(final DsumPreset preset) {
+        gameCombo.setSelectedItem(preset.game());
+        routesCombo.setSelectedItem(preset.route());
+        modifierModel.setValue(0);
+        leadModel.setValue(preset.leadLevel());
+        pikachu.setSelected(preset.pikaLead());
+        applyMovementModeUi(preset.movementMode());
+        onPresetApplied.accept(preset);
+        SwingUtilities.invokeLater(onRefocusCalibrationSurface);
+    }
+
+    private void applyMovementModeUi(final OverworldMovementMode mode) {
+        suppressMovementCallbacks = true;
+        try {
+            movementModeButtons[mode.ordinal()].setSelected(true);
+        } finally {
+            suppressMovementCallbacks = false;
+        }
+        onMovementModeChanged.accept(mode);
+    }
+
     private JPanel buildMovementModeSelector(
             final OverworldMovementMode initial,
             final Consumer<OverworldMovementMode> onChanged) {
@@ -205,7 +272,7 @@ public final class SlotsSelectorPanel extends JPanel {
         movementModeLabel.setForeground(UiTheme.TEXT_MUTED);
         movementModeLabel.setFont(movementModeLabel.getFont().deriveFont(Font.PLAIN, 12f));
         movementModeLabel.setToolTipText(
-                "Reference step lag (0 / 9 / 17 frames) for your button timing — does not move the amber suggestion band.");
+                "Step lag (0 / 9 / 17 frames): rotates the wheel artwork by that much DSum advance (opposite ring motion) so the ring matches after a step. Overlap timing and suggestions use the live counter.");
         row.add(movementModeLabel);
 
         final JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -233,8 +300,12 @@ public final class SlotsSelectorPanel extends JPanel {
             });
             bg.add(tb);
             group.add(tb);
+            movementModeButtons[m.ordinal()] = tb;
             final OverworldMovementMode mode = m;
             tb.addActionListener(e -> {
+                if (suppressMovementCallbacks) {
+                    return;
+                }
                 if (tb.isSelected()) {
                     onChanged.accept(mode);
                 }
