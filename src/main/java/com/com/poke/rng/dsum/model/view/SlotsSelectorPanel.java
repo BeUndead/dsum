@@ -1,9 +1,10 @@
 package com.com.poke.rng.dsum.model.view;
 
+import com.com.poke.rng.dsum.config.EncounterSetupPreset;
 import com.com.poke.rng.dsum.constants.DsumPreset;
+import com.com.poke.rng.dsum.constants.EncounterSlot;
 import com.com.poke.rng.dsum.constants.Game;
 import com.com.poke.rng.dsum.constants.Route;
-import com.com.poke.rng.dsum.model.OverworldMovementMode;
 import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
@@ -12,6 +13,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -23,7 +26,7 @@ public final class SlotsSelectorPanel extends JPanel {
     private final JButton detailsToggle = new JButton("Details…");
     private final JButton setupButton = new JButton("Setup…");
     private final JPanel body = new JPanel();
-    private final JPanel detailsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+    private final JPanel detailsPanel = new JPanel();
     private final JPanel mainRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
     private final boolean[] detailsExpanded = {false};
     private volatile boolean compactChrome;
@@ -31,40 +34,44 @@ public final class SlotsSelectorPanel extends JPanel {
     private final JLabel modifierLabel;
     private final JLabel leadLabel;
     private final JCheckBox pikachu;
+    private final JCheckBox outerRbCycleUncertainty;
     private final JToggleButton soundMute;
-    private JLabel movementModeLabel;
-    private JPanel movementModeChip;
-    private final JToggleButton[] movementModeButtons = new JToggleButton[OverworldMovementMode.values().length];
-    private boolean suppressMovementCallbacks;
-
     private final SpinnerNumberModel modifierModel;
     private final SpinnerNumberModel leadModel;
     private final JSpinner modifierSpinner;
     private final JSpinner leadLevelSpinner;
 
-    private final Consumer<OverworldMovementMode> onMovementModeChanged;
+    private final List<EncounterSetupPreset> userPresets;
+    private final Runnable onAddCurrentPresetRequested;
+    private final JLabel presetsMenuLink;
+    private final JLabel presetLinksSeparator;
+    private final JLabel addPresetLink;
     private final Runnable onRefocusCalibrationSurface;
-    private final Consumer<DsumPreset> onPresetApplied;
+    private final Consumer<List<EncounterSlot>> onPresetTargetsApplied;
 
     public SlotsSelectorPanel(
             final Game game,
             final Route route,
             final boolean defaultPika,
-            final OverworldMovementMode defaultMovementMode,
             final int initialLeadLevel,
+            final int initialModifierUi,
+            final boolean defaultOuterRbCycleUncertainty,
+            final List<EncounterSetupPreset> userPresets,
+            final Runnable onAddCurrentPresetRequested,
             final Consumer<Game> onGameChanged,
             final Consumer<Route> onRouteChanged,
             final Consumer<Boolean> onPikachuChanged,
             final Consumer<Integer> onModifierChanged,
             final Consumer<Integer> onLeadLevelChanged,
             final Consumer<Boolean> onSoundMutedChanged,
-            final Consumer<OverworldMovementMode> onMovementModeChanged,
+            final Consumer<Boolean> onOuterRbCycleUncertaintyChanged,
             final Runnable onRefocusCalibrationSurface,
-            final Consumer<DsumPreset> onPresetApplied) {
+            final Consumer<List<EncounterSlot>> onPresetTargetsApplied) {
 
-        this.onMovementModeChanged = onMovementModeChanged;
+        this.userPresets = new ArrayList<>(userPresets);
+        this.onAddCurrentPresetRequested = onAddCurrentPresetRequested;
         this.onRefocusCalibrationSurface = onRefocusCalibrationSurface;
-        this.onPresetApplied = onPresetApplied;
+        this.onPresetTargetsApplied = onPresetTargetsApplied;
 
         modifierLabel = new JLabel("Mod:");
         modifierSpinner = new JSpinner();
@@ -72,7 +79,7 @@ public final class SlotsSelectorPanel extends JPanel {
         modifierLabel.setForeground(UiTheme.TEXT_MUTED);
         modifierLabel.setToolTipText("Overworld DSum cycle modifier");
 
-        modifierModel = new SpinnerNumberModel(0, -150, 100, 10);
+        modifierModel = new SpinnerNumberModel(initialModifierUi, -150, 100, 10);
         modifierSpinner.setModel(modifierModel);
         modifierSpinner.addChangeListener(e -> onModifierChanged.accept((Integer) modifierModel.getValue()));
         if (modifierSpinner.getEditor() instanceof JSpinner.NumberEditor editor) {
@@ -88,6 +95,18 @@ public final class SlotsSelectorPanel extends JPanel {
         pikachu.setSelected(defaultPika);
         pikachu.addActionListener(e -> onPikachuChanged.accept(pikachu.isSelected()));
 
+        outerRbCycleUncertainty = new JCheckBox();
+        outerRbCycleUncertainty.setText("Accurate uncertainty");
+        outerRbCycleUncertainty.setForeground(UiTheme.TEXT_PRIMARY);
+        outerRbCycleUncertainty.setSelected(defaultOuterRbCycleUncertainty);
+        outerRbCycleUncertainty.setToolTipText(
+                "Red/Blue: when on, draws a wider muted band for possible overworld cycle length (≈367–415 f) vs nominal; "
+                        + "inner band stays slot + 2°/cycle. Beeps, hum, and approach bar use the inner band only. "
+                        + "Yellow has no outer cycle-length band, but the choice is kept when switching to Red/Blue.");
+        outerRbCycleUncertainty.getAccessibleContext().setAccessibleName("Accurate uncertainty");
+        outerRbCycleUncertainty.addActionListener(
+                e -> onOuterRbCycleUncertaintyChanged.accept(outerRbCycleUncertainty.isSelected()));
+
         leadLabel = new JLabel("Lead Lv:");
         leadLabel.setForeground(UiTheme.TEXT_MUTED);
         leadLevelSpinner = new JSpinner();
@@ -100,9 +119,38 @@ public final class SlotsSelectorPanel extends JPanel {
         }
         leadLevelSpinner.setPreferredSize(new Dimension(64, 32));
 
+        presetsMenuLink = new JLabel("Presets");
+        presetsMenuLink.setForeground(UiTheme.ACCENT);
+        presetsMenuLink.setFont(presetsMenuLink.getFont().deriveFont(Font.PLAIN, 13f));
+        presetsMenuLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        presetsMenuLink.setToolTipText("Bundled setups and any presets defined in config (preset.count, preset.1.*, …)");
+        presetsMenuLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(final MouseEvent e) {
+                showPresetMenu(presetsMenuLink);
+            }
+        });
+
+        presetLinksSeparator = new JLabel(" · ");
+        presetLinksSeparator.setForeground(UiTheme.TEXT_MUTED);
+        presetLinksSeparator.setFont(presetLinksSeparator.getFont().deriveFont(Font.PLAIN, 13f));
+
+        addPresetLink = new JLabel("Add preset…");
+        addPresetLink.setForeground(UiTheme.ACCENT);
+        addPresetLink.setFont(addPresetLink.getFont().deriveFont(Font.PLAIN, 13f));
+        addPresetLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        addPresetLink.setToolTipText("Save the current game, route, targets, and details to the config file");
+        addPresetLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(final MouseEvent e) {
+                onAddCurrentPresetRequested.run();
+            }
+        });
+
         final Runnable refreshYellowDetailVisibility = () -> {
             final boolean yellowGame = gameCombo.getSelectedItem() == Game.YELLOW;
             pikachu.setVisible(yellowGame);
+            outerRbCycleUncertainty.setVisible(true);
         };
 
         gameCombo.setSelectedItem(game);
@@ -169,30 +217,40 @@ public final class SlotsSelectorPanel extends JPanel {
         mainRow.setOpaque(false);
         mainRow.add(gameCombo);
         mainRow.add(routesCombo);
-        mainRow.add(buildMovementModeSelector(defaultMovementMode, onMovementModeChanged));
 
+        detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setOpaque(true);
         detailsPanel.setBackground(UiTheme.SURFACE_ALT);
         detailsPanel.putClientProperty(FlatClientProperties.STYLE, "arc: 10");
         detailsPanel.setBorder(new EmptyBorder(10, 12, 12, 12));
-        detailsPanel.add(leadLabel);
-        detailsPanel.add(leadLevelSpinner);
-        detailsPanel.add(modifierLabel);
-        detailsPanel.add(modifierSpinner);
-        detailsPanel.add(pikachu);
 
-        final JLabel presetsLink = new JLabel("Presets");
-        presetsLink.setForeground(UiTheme.ACCENT);
-        presetsLink.setFont(presetsLink.getFont().deriveFont(Font.PLAIN, 13f));
-        presetsLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        presetsLink.setToolTipText("Apply a bundled game / route / movement / slot setup");
-        presetsLink.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(final MouseEvent e) {
-                showPresetMenu(presetsLink);
-            }
-        });
-        detailsPanel.add(presetsLink);
+        final JPanel detailsRowSpinners = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        detailsRowSpinners.setOpaque(false);
+        detailsRowSpinners.add(leadLabel);
+        detailsRowSpinners.add(leadLevelSpinner);
+        detailsRowSpinners.add(Box.createRigidArea(new Dimension(16, 1)));
+        detailsRowSpinners.add(modifierLabel);
+        detailsRowSpinners.add(modifierSpinner);
+        detailsRowSpinners.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        final JPanel detailsRowChecks = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        detailsRowChecks.setOpaque(false);
+        detailsRowChecks.add(pikachu);
+        detailsRowChecks.add(outerRbCycleUncertainty);
+        detailsRowChecks.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        final JPanel detailsRowPresets = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        detailsRowPresets.setOpaque(false);
+        detailsRowPresets.add(presetsMenuLink);
+        detailsRowPresets.add(presetLinksSeparator);
+        detailsRowPresets.add(addPresetLink);
+        detailsRowPresets.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        detailsPanel.add(detailsRowSpinners);
+        detailsPanel.add(Box.createVerticalStrut(6));
+        detailsPanel.add(detailsRowChecks);
+        detailsPanel.add(Box.createVerticalStrut(6));
+        detailsPanel.add(detailsRowPresets);
         detailsPanel.getAccessibleContext().setAccessibleName("Detailed settings");
 
         detailsToggle.setForeground(UiTheme.ACCENT);
@@ -226,7 +284,6 @@ public final class SlotsSelectorPanel extends JPanel {
         add(body, BorderLayout.CENTER);
 
         refreshYellowDetailVisibility.run();
-        onMovementModeChanged.accept(defaultMovementMode);
     }
 
     private void showPresetMenu(final Component invoker) {
@@ -235,85 +292,32 @@ public final class SlotsSelectorPanel extends JPanel {
             menu.add(new AbstractAction(p.menuLabel()) {
                 @Override
                 public void actionPerformed(final ActionEvent e) {
-                    applyPreset(p);
+                    applyPreset(EncounterSetupPreset.fromBundled(p));
                 }
             });
+        }
+        if (!userPresets.isEmpty()) {
+            menu.addSeparator();
+            for (final EncounterSetupPreset p : userPresets) {
+                menu.add(new AbstractAction(p.menuLabel()) {
+                    @Override
+                    public void actionPerformed(final ActionEvent e) {
+                        applyPreset(p);
+                    }
+                });
+            }
         }
         menu.show(invoker, 0, invoker.getHeight());
     }
 
-    private void applyPreset(final DsumPreset preset) {
+    private void applyPreset(final EncounterSetupPreset preset) {
         gameCombo.setSelectedItem(preset.game());
         routesCombo.setSelectedItem(preset.route());
-        modifierModel.setValue(0);
+        modifierModel.setValue(preset.modifierUi());
         leadModel.setValue(preset.leadLevel());
         pikachu.setSelected(preset.pikaLead());
-        applyMovementModeUi(preset.movementMode());
-        onPresetApplied.accept(preset);
+        onPresetTargetsApplied.accept(preset.targetSlots());
         SwingUtilities.invokeLater(onRefocusCalibrationSurface);
-    }
-
-    private void applyMovementModeUi(final OverworldMovementMode mode) {
-        suppressMovementCallbacks = true;
-        try {
-            movementModeButtons[mode.ordinal()].setSelected(true);
-        } finally {
-            suppressMovementCallbacks = false;
-        }
-        onMovementModeChanged.accept(mode);
-    }
-
-    private JPanel buildMovementModeSelector(
-            final OverworldMovementMode initial,
-            final Consumer<OverworldMovementMode> onChanged) {
-        final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        row.setOpaque(false);
-        movementModeLabel = new JLabel("Move:");
-        movementModeLabel.setForeground(UiTheme.TEXT_MUTED);
-        movementModeLabel.setFont(movementModeLabel.getFont().deriveFont(Font.PLAIN, 12f));
-        movementModeLabel.setToolTipText(
-                "Step lag (0 / 9 / 17 frames): rotates the wheel artwork by that much DSum advance (opposite ring motion) so the ring matches after a step. Overlap timing and suggestions use the live counter.");
-        row.add(movementModeLabel);
-
-        final JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        group.setOpaque(true);
-        group.setBackground(UiTheme.SURFACE_ALT);
-        group.putClientProperty(FlatClientProperties.STYLE, "arc: 10");
-        group.setBorder(new EmptyBorder(4, 6, 4, 6));
-        movementModeChip = group;
-
-        final ButtonGroup bg = new ButtonGroup();
-        for (final OverworldMovementMode m : OverworldMovementMode.values()) {
-            final JToggleButton tb = new JToggleButton(new MovementModeIcon(m));
-            tb.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-            tb.setFocusable(false);
-            tb.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
-            tb.setToolTipText(switch (m) {
-                case CORNER_BONK -> "Corner bonking — 0 frame step lag";
-                case BIKE -> "Bike — 9 frame step lag";
-                case WALKING -> "Walking — 17 frame step lag";
-            });
-            tb.getAccessibleContext().setAccessibleName(switch (m) {
-                case CORNER_BONK -> "Corner bonking movement";
-                case BIKE -> "Bicycle movement";
-                case WALKING -> "Walking movement";
-            });
-            bg.add(tb);
-            group.add(tb);
-            movementModeButtons[m.ordinal()] = tb;
-            final OverworldMovementMode mode = m;
-            tb.addActionListener(e -> {
-                if (suppressMovementCallbacks) {
-                    return;
-                }
-                if (tb.isSelected()) {
-                    onChanged.accept(mode);
-                }
-            });
-        }
-        ((JToggleButton) group.getComponent(initial.ordinal())).setSelected(true);
-        row.add(group);
-        return row;
     }
 
     public void applyUiThemeColors() {
@@ -325,15 +329,18 @@ public final class SlotsSelectorPanel extends JPanel {
         modifierLabel.setForeground(UiTheme.TEXT_MUTED);
         leadLabel.setForeground(UiTheme.TEXT_MUTED);
         pikachu.setForeground(UiTheme.TEXT_PRIMARY);
+        outerRbCycleUncertainty.setForeground(UiTheme.TEXT_PRIMARY);
         soundMute.setForeground(UiTheme.TEXT_PRIMARY);
         soundMute.repaint();
         detailsToggle.setForeground(UiTheme.ACCENT);
         setupButton.setForeground(UiTheme.ACCENT);
-        movementModeLabel.setForeground(UiTheme.TEXT_MUTED);
-        movementModeChip.setBackground(UiTheme.SURFACE_ALT);
-        for (final Component c : movementModeChip.getComponents()) {
-            c.repaint();
-        }
+        presetsMenuLink.setForeground(UiTheme.ACCENT);
+        presetLinksSeparator.setForeground(UiTheme.TEXT_MUTED);
+        addPresetLink.setForeground(UiTheme.ACCENT);
+    }
+
+    public void addUserPreset(final EncounterSetupPreset preset) {
+        userPresets.add(preset);
     }
 
     public void addLeadingToolbar(final JComponent group) {

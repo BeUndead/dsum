@@ -31,7 +31,7 @@ public final class OverlapHumPlayer {
         SourceDataLine line = null;
 
         try {
-            DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+            final DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
             if (!AudioSystem.isLineSupported(info)) {
                 return;
             }

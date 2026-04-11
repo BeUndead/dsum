@@ -8,6 +8,7 @@ import com.com.poke.rng.dsum.util.Triplet;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 import java.util.OptionalDouble;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Arc2D;
@@ -154,7 +155,6 @@ public final class EncounterWheel extends JPanel {
         drawSlotLabels(g2, cx, cy);
 
         drawUncertaintyWedge(g2, cx, cy);
-        drawSpaceEncounterPreviewWedgeScreen(g2, cx, cy);
         drawArrow(g2, cx, cy);
         drawText(g2);
     }
@@ -189,62 +189,72 @@ public final class EncounterWheel extends JPanel {
         }
     }
 
-    /**
-     * Debug (F2): estimated encounter band if Space were pressed now — drawn in <strong>screen</strong> space like
-     * {@link #drawUncertaintyWedge}, offset from the needle by the entry window’s in-battle angular span
-     * ({@link EncounterWheelModel#peekEncounterPreviewOffsetFromNeedleDeg}), not by integer DSum steps from the triplet
-     * center (near-current DSum → ~5°).
-     */
-    private void drawSpaceEncounterPreviewWedgeScreen(final Graphics2D g, final int cx, final int cy) {
-        if (!model.isSpaceEncounterPreviewVisible() || model.isCalibrating()) {
-            return;
-        }
-        final OptionalDouble offsetOpt = model.peekEncounterPreviewOffsetFromNeedleDeg(false);
-        if (offsetOpt.isEmpty()) {
-            return;
-        }
-        final double offsetDeg = offsetOpt.getAsDouble();
-        final double wedgeW = Math.max(0.35, model.getUncertaintyWedgeExtentDeg());
-        final double startDeg = 90 + offsetDeg - wedgeW / 2;
-
-        final Shape slice =
-                createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6), startDeg, wedgeW,
-                        false);
-        final Composite oldC = g.getComposite();
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
-        g.setColor(UiTheme.DEBUG_SPACE_ENCOUNTER_FILL);
-        g.fill(slice);
-        g.setComposite(oldC);
-
-        g.setColor(UiTheme.DEBUG_SPACE_ENCOUNTER_STROKE);
-        g.setStroke(new BasicStroke(gsf(1.5f)));
-        g.draw(slice);
-    }
-
     private void drawSuggestedRangeHighlight(final Graphics2D g, final int cx, final int cy) {
         final Triplet<EncounterSlot, EncounterSlot, EncounterSlot> t = model.getSuggestedSlots();
         if (t == null) {
+            return;
+        }
+        /*
+         * Calibrated overworld: the grey uncertainty wedge already marks the band; the amber suggested arc sits on the
+         * same region and reads as a duplicate. Still draw when uncalibrated (no wedge) or while calibrating (wedge hidden).
+         */
+        if (model.getCalibratedSlot() != null && !model.isCalibrating()) {
             return;
         }
         final int firstIndex = t.first().ordinal();
         final int likeliestIndex = t.second().ordinal();
         final int end = t.third().ordinal();
         final int n = EncounterSlot.values().length;
+        final boolean anyWedgeInRun = model.suggestedRunHasAnyWedgeOverlap(t);
 
         final Composite oldC = g.getComposite();
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.32f));
         int idx = firstIndex;
         while (true) {
             final EncounterSlot slot = EncounterSlot.values()[idx];
-            final int width = slot.max() - slot.min() + 1;
-            final double startDeg = (slot.min() / (double) DSUM_RANGE) * 360 + 90;
-            final double extentDeg = (width / (double) DSUM_RANGE) * 360;
-            final Shape slice =
-                    createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6),
-                            startDeg, extentDeg, false);
             final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
-            g.setColor(SuggestionStyle.amberSuggestionFillOpaque(d));
-            g.fill(slice);
+            final OptionalDouble inner = model.encounterInnerWedgeOverlapPortionOfSlot(slot);
+            final OptionalDouble outerOnly = model.encounterOuterOnlyWedgeOverlapPortionOfSlot(slot);
+            final List<int[]> outerSegs = model.suggestedOuterOnlyWedgeDsumSegmentsForSlot(slot);
+            final List<int[]> innerSegs = model.suggestedInnerWedgeDsumSegmentsForSlot(slot);
+            final boolean hasInnerPaint = inner.isPresent() && inner.getAsDouble() > 1e-9;
+            final boolean hasOuterPaint = outerOnly.isPresent() && outerOnly.getAsDouble() > 1e-9;
+            if (!hasInnerPaint && !hasOuterPaint) {
+                if (!anyWedgeInRun) {
+                    final int width = slot.max() - slot.min() + 1;
+                    final double startDeg = (slot.min() / (double) DSUM_RANGE) * 360 + 90;
+                    final double extentDeg = (width / (double) DSUM_RANGE) * 360;
+                    final Shape slice =
+                            createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6),
+                                    startDeg, extentDeg, false);
+                    g.setColor(SuggestionStyle.amberSuggestionFillOpaqueFromSuggestedLayers(d, inner, outerOnly));
+                    g.fill(slice);
+                }
+            } else {
+                final Color outerFill =
+                        SuggestionStyle.amberSuggestionFillOpaqueFromSuggestedLayers(
+                                d, OptionalDouble.empty(), outerOnly);
+                if (hasOuterPaint) {
+                    if (outerSegs.isEmpty()) {
+                        fillDsumArcRingSlice(g, cx, cy, slot.min(), slot.max(), outerFill);
+                    } else {
+                        for (final int[] seg : outerSegs) {
+                            fillDsumArcRingSlice(g, cx, cy, seg[0], seg[1], outerFill);
+                        }
+                    }
+                }
+                final Color innerFill =
+                        SuggestionStyle.amberSuggestionFillOpaqueFromSuggestedLayers(d, inner, OptionalDouble.empty());
+                if (hasInnerPaint) {
+                    if (innerSegs.isEmpty()) {
+                        fillDsumArcRingSlice(g, cx, cy, slot.min(), slot.max(), innerFill);
+                    } else {
+                        for (final int[] seg : innerSegs) {
+                            fillDsumArcRingSlice(g, cx, cy, seg[0], seg[1], innerFill);
+                        }
+                    }
+                }
+            }
             if (idx == end) {
                 break;
             }
@@ -256,20 +266,81 @@ public final class EncounterWheel extends JPanel {
         idx = firstIndex;
         while (true) {
             final EncounterSlot slot = EncounterSlot.values()[idx];
-            final int width = slot.max() - slot.min() + 1;
-            final double startDeg = (slot.min() / (double) DSUM_RANGE) * 360 + 90;
-            final double extentDeg = (width / (double) DSUM_RANGE) * 360;
-            final Shape slice =
-                    createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6),
-                            startDeg, extentDeg, false);
             final int segD = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
-            g.setColor(SuggestionStyle.amberSuggestionStroke(segD));
-            g.draw(slice);
+            final OptionalDouble innerS = model.encounterInnerWedgeOverlapPortionOfSlot(slot);
+            final OptionalDouble outerS = model.encounterOuterOnlyWedgeOverlapPortionOfSlot(slot);
+            final List<int[]> outerSegs = model.suggestedOuterOnlyWedgeDsumSegmentsForSlot(slot);
+            final List<int[]> innerSegs = model.suggestedInnerWedgeDsumSegmentsForSlot(slot);
+            final boolean hasInnerPaint = innerS.isPresent() && innerS.getAsDouble() > 1e-9;
+            final boolean hasOuterPaint = outerS.isPresent() && outerS.getAsDouble() > 1e-9;
+            if (!hasInnerPaint && !hasOuterPaint) {
+                if (!anyWedgeInRun) {
+                    final int width = slot.max() - slot.min() + 1;
+                    final double startDeg = (slot.min() / (double) DSUM_RANGE) * 360 + 90;
+                    final double extentDeg = (width / (double) DSUM_RANGE) * 360;
+                    final Shape slice =
+                            createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6),
+                                    startDeg, extentDeg, false);
+                    g.setColor(SuggestionStyle.amberSuggestionStrokeFromSuggestedLayers(segD, innerS, outerS));
+                    g.draw(slice);
+                }
+            } else {
+                final Color outerStroke =
+                        SuggestionStyle.amberSuggestionStrokeFromSuggestedLayers(
+                                segD, OptionalDouble.empty(), outerS);
+                if (hasOuterPaint) {
+                    if (outerSegs.isEmpty()) {
+                        strokeDsumArcRingSlice(g, cx, cy, slot.min(), slot.max(), outerStroke);
+                    } else {
+                        for (final int[] seg : outerSegs) {
+                            strokeDsumArcRingSlice(g, cx, cy, seg[0], seg[1], outerStroke);
+                        }
+                    }
+                }
+                final Color innerStroke =
+                        SuggestionStyle.amberSuggestionStrokeFromSuggestedLayers(
+                                segD, innerS, OptionalDouble.empty());
+                if (hasInnerPaint) {
+                    if (innerSegs.isEmpty()) {
+                        strokeDsumArcRingSlice(g, cx, cy, slot.min(), slot.max(), innerStroke);
+                    } else {
+                        for (final int[] seg : innerSegs) {
+                            strokeDsumArcRingSlice(g, cx, cy, seg[0], seg[1], innerStroke);
+                        }
+                    }
+                }
+            }
             if (idx == end) {
                 break;
             }
             idx = (idx + 1) % n;
         }
+    }
+
+    private void fillDsumArcRingSlice(
+            final Graphics2D g, final int cx, final int cy, final int lo, final int hi, final Color color) {
+        final int nCells = hi - lo + 1;
+        if (nCells <= 0) {
+            return;
+        }
+        final double startDeg = (lo / (double) DSUM_RANGE) * 360 + 90;
+        final double extentDeg = (nCells / (double) DSUM_RANGE) * 360;
+        g.setColor(color);
+        g.fill(createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6), startDeg, extentDeg,
+                false));
+    }
+
+    private void strokeDsumArcRingSlice(
+            final Graphics2D g, final int cx, final int cy, final int lo, final int hi, final Color color) {
+        final int nCells = hi - lo + 1;
+        if (nCells <= 0) {
+            return;
+        }
+        final double startDeg = (lo / (double) DSUM_RANGE) * 360 + 90;
+        final double extentDeg = (nCells / (double) DSUM_RANGE) * 360;
+        g.setColor(color);
+        g.draw(createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 6), gs(WHEEL_INNER_RADIUS - 6), startDeg, extentDeg,
+                false));
     }
 
     /** Green ring highlight on configured target slot(s), drawn above the amber suggestion band. */
@@ -346,16 +417,29 @@ public final class EncounterWheel extends JPanel {
             return;
         }
 
-        final double extentDeg = model.getUncertaintyWedgeExtentDeg();
-        final double startDeg = 90 - extentDeg / 2;
-        final Shape wedge =
-                createRingSlice(cx, cy, gs(WHEEL_OUTER_RADIUS + 5), gs(WHEEL_INNER_RADIUS - 5), startDeg, extentDeg, false);
+        final int outerR = gs(WHEEL_OUTER_RADIUS + 5);
+        final int innerR = gs(WHEEL_INNER_RADIUS - 5);
+        if (model.isDrawingOuterRbCycleUncertaintyBand()) {
+            final double n = model.getUncertaintyWedgeExtentNegDeg();
+            final double p = model.getUncertaintyWedgeExtentPosDeg();
+            final Shape outerSlice =
+                    createRingSlice(cx, cy, outerR, innerR, 90 - n, n + p, false);
+            g.setColor(UiTheme.UNCERTAINTY_OUTER_FILL);
+            g.fill(outerSlice);
+            g.setColor(UiTheme.UNCERTAINTY_OUTER_STROKE);
+            g.setStroke(new BasicStroke(gsf(1.25f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g.draw(outerSlice);
+        }
 
+        final double inNeg = model.getInnerUncertaintyWedgeExtentNegDeg();
+        final double inPos = model.getInnerUncertaintyWedgeExtentPosDeg();
+        final Shape innerSlice =
+                createRingSlice(cx, cy, outerR, innerR, 90 - inNeg, inNeg + inPos, false);
         g.setColor(UiTheme.UNCERTAINTY_FILL);
-        g.fill(wedge);
+        g.fill(innerSlice);
         g.setColor(UiTheme.UNCERTAINTY_STROKE);
         g.setStroke(new BasicStroke(gsf(2f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g.draw(wedge);
+        g.draw(innerSlice);
     }
 
     private void drawArrow(final Graphics2D g, final int cx, final int cy) {

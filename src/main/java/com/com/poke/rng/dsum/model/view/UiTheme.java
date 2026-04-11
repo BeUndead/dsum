@@ -44,9 +44,9 @@ public final class UiTheme {
     public static Color SUGGESTION_GOLD_STROKE;
     public static Color UNCERTAINTY_FILL;
     public static Color UNCERTAINTY_STROKE;
-    /** “If Space now” encounter DSum debug wedge on the wheel (toggle with F2). */
-    public static Color DEBUG_SPACE_ENCOUNTER_FILL;
-    public static Color DEBUG_SPACE_ENCOUNTER_STROKE;
+    /** Wider R/B overworld cycle-length slack band drawn under the main uncertainty fill. */
+    public static Color UNCERTAINTY_OUTER_FILL;
+    public static Color UNCERTAINTY_OUTER_STROKE;
     /** Full-area tint while waiting for calibration digit (in battle). */
     public static Color CALIBRATING_SURFACE_WASH;
     /** Subtle warm tint on overworld when no slot has been calibrated yet (distinct from calibrating blue). */
@@ -163,8 +163,8 @@ public final class UiTheme {
         // Wedge over slot colours — was easy to lose on dark surfaces; stronger fill + light rim read better than feint white/alpha.
         UNCERTAINTY_FILL = new Color(0xe8, 0xee, 0xfb, 0x58);
         UNCERTAINTY_STROKE = new Color(0xff, 0xff, 0xff, 0xc0);
-        DEBUG_SPACE_ENCOUNTER_FILL = new Color(0x4a, 0x9e, 0xff, 0x40);
-        DEBUG_SPACE_ENCOUNTER_STROKE = new Color(0x6d, 0xc0, 0xff, 0xb0);
+        UNCERTAINTY_OUTER_FILL = new Color(0xc8, 0xd4, 0xec, 0x38);
+        UNCERTAINTY_OUTER_STROKE = new Color(0xff, 0xff, 0xff, 0x50);
         CALIBRATING_SURFACE_WASH = new Color(0x6d, 0xa8, 0xff, 0x22);
         UNCALIBRATED_SURFACE_WASH = new Color(0xf5, 0xa4, 0x23, 0x18);
         LABEL_HALO = new Color(0x0, 0x0, 0x0, 0xd0);
@@ -203,8 +203,8 @@ public final class UiTheme {
         SUGGESTION_GOLD_STROKE = new Color(180, 120, 0, 200);
         UNCERTAINTY_FILL = new Color(248, 250, 255, 228);
         UNCERTAINTY_STROKE = new Color(55, 65, 85, 110);
-        DEBUG_SPACE_ENCOUNTER_FILL = new Color(37, 99, 235, 52);
-        DEBUG_SPACE_ENCOUNTER_STROKE = new Color(29, 78, 216, 200);
+        UNCERTAINTY_OUTER_FILL = new Color(220, 228, 242, 150);
+        UNCERTAINTY_OUTER_STROKE = new Color(55, 65, 85, 55);
         CALIBRATING_SURFACE_WASH = new Color(0x3b, 0x82, 0xf6, 0x2a);
         UNCALIBRATED_SURFACE_WASH = new Color(0xc2, 0x7a, 0x00, 0x14);
         LABEL_HALO = new Color(255, 255, 255, 210);

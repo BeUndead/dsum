@@ -3,7 +3,11 @@
 This is a first pass at making a visual DSum timer application, which can be used
 live while playing the game (rather than pre-calculated charts).
 
-![app-running.png](images/app-running.png)
+![AppFull.png](images/AppFull.png)
+
+The app also has a compact mode
+
+![AppCompact.PNG](images/AppCompact.PNG)
 
 ## Usage
 
@@ -75,7 +79,7 @@ Each column is one encounter table slot. Toggle **on** every slot you are willin
 
 ### Movement mode (Move: corner / bike / walk)
 
-Picks **step lag after a step** (corner **0**, bike **9**, walking **17** frames): the **wheel ring** rotates by that much (relative to the live counter) so artwork lines up with when the step “finishes” on hardware. **Overlap tint, hum, approach bar, beeps, and amber suggestions** all follow the **live** DSum and wedge—no extra bike/walk delay in that logic.
+Picks **step lag after a step** (corner **0**, bike **9**, walking **17** frames): the **wheel ring** (and **amber suggested-slot band**) use that offset so what you see under the needle matches post-step alignment. **Overlap tint, hum, approach bar, and beeps** still use the **live** counter only (no lag) so “search now” timing matches hardware DSum.
 
 ### Lead level
 

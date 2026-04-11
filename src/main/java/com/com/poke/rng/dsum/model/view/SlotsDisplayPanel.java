@@ -1,6 +1,7 @@
 package com.com.poke.rng.dsum.model.view;
 
 import com.com.poke.rng.dsum.constants.*;
+import com.com.poke.rng.dsum.model.EncounterWheelModel;
 import com.com.poke.rng.dsum.util.SlotPalette;
 import com.com.poke.rng.dsum.util.SuggestionStyle;
 import com.com.poke.rng.dsum.util.SpriteImageUtil;
@@ -36,17 +37,24 @@ public class SlotsDisplayPanel extends JPanel {
     private volatile boolean compact;
     private volatile Triplet<EncounterSlot, EncounterSlot, EncounterSlot> lastSuggested;
 
+    private final EncounterWheelModel encounterModel;
+
     private final List<JToggleButton> buttons = new ArrayList<>(10);
-    private final List<JPanel> slotColorBars = new ArrayList<>(10);
-    private final List<JPanel> suggestionAmberBars = new ArrayList<>(10);
+    private final List<TargetAwareSlotColorBar> slotColorBars = new ArrayList<>(10);
+    private final List<SlotSuggestionStrip> suggestionAmberBars = new ArrayList<>(10);
     private final List<SlotTile> tiles = new ArrayList<>();
 
     private final Consumer<List<EncounterSlot>> onTargetsChanged;
     private volatile boolean suppressTargetCallbacks;
 
-    public SlotsDisplayPanel(final Game game, final Route route, final EncounterSlot initialSlot,
-                             final Consumer<List<EncounterSlot>> onTargetsChanged) {
+    public SlotsDisplayPanel(
+            final Game game,
+            final Route route,
+            final EncounterSlot initialSlot,
+            final EncounterWheelModel encounterModel,
+            final Consumer<List<EncounterSlot>> onTargetsChanged) {
         this.onTargetsChanged = onTargetsChanged;
+        this.encounterModel = encounterModel;
         this.game = game;
         this.route = route;
 
@@ -60,7 +68,7 @@ public class SlotsDisplayPanel extends JPanel {
             column.setOpaque(false);
 
             final JToggleButton toggle = new SpriteSlotToggle(this);
-            toggle.setPreferredSize(new Dimension(getWidth() / 10, getHeight()));
+            toggle.setPreferredSize(new Dimension(getWidth() / 10, getHeight())); 
             toggle.setFocusPainted(false);
             if (i == initialSlot.ordinal()) {
                 toggle.setSelected(true);
@@ -78,14 +86,16 @@ public class SlotsDisplayPanel extends JPanel {
                 }
                 onTargetsChanged.accept(newTargets);
                 refreshToggleStyles();
+                if (lastSuggested != null) {
+                    setSuggestedSlots(lastSuggested);
+                }
             });
             applyToggleChrome(toggle);
 
-            final JPanel colorBar = new JPanel();
-            colorBar.setOpaque(true);
-            applyIdleBar(colorBar, encounterSlot);
+            final TargetAwareSlotColorBar colorBar = new TargetAwareSlotColorBar(encounterModel, encounterSlot);
+            applyIdleBar(colorBar);
 
-            final JPanel amberBar = new JPanel();
+            final SlotSuggestionStrip amberBar = new SlotSuggestionStrip();
             applyIdleAmberBar(amberBar);
 
             final JPanel bottomStack = new JPanel(new BorderLayout());
@@ -130,13 +140,16 @@ public class SlotsDisplayPanel extends JPanel {
             suppressTargetCallbacks = false;
         }
         onTargetsChanged.accept(next);
+        if (lastSuggested != null) {
+            setSuggestedSlots(lastSuggested);
+        }
     }
 
     public void applyUiThemeColors() {
         setBackground(UiTheme.SURFACE);
         refreshToggleStyles();
         for (int j = 0; j < slotColorBars.size(); j++) {
-            applyIdleBar(slotColorBars.get(j), EncounterSlot.values()[j]);
+            applyIdleBar(slotColorBars.get(j));
             applyIdleAmberBar(suggestionAmberBars.get(j));
         }
         if (lastSuggested != null) {
@@ -169,7 +182,7 @@ public class SlotsDisplayPanel extends JPanel {
             setPreferredSize(new Dimension(500, 150));
         }
         for (final EncounterSlot slot : EncounterSlot.values()) {
-            applyIdleBar(slotColorBars.get(slot.ordinal()), slot);
+            applyIdleBar(slotColorBars.get(slot.ordinal()));
             applyIdleAmberBar(suggestionAmberBars.get(slot.ordinal()));
         }
         if (lastSuggested != null) {
@@ -181,8 +194,8 @@ public class SlotsDisplayPanel extends JPanel {
     }
 
     private void refreshToggleStyles() {
-        for (int j = 0; j < buttons.size(); j++) {
-            applyToggleChrome(buttons.get(j));
+        for (final JToggleButton button : buttons) {
+            applyToggleChrome(button);
         }
     }
 
@@ -278,7 +291,7 @@ public class SlotsDisplayPanel extends JPanel {
             return;
         }
         for (int j = 0; j < slotColorBars.size(); j++) {
-            applyIdleBar(slotColorBars.get(j), EncounterSlot.values()[j]);
+            applyIdleBar(slotColorBars.get(j));
             applyIdleAmberBar(suggestionAmberBars.get(j));
         }
 
@@ -289,20 +302,21 @@ public class SlotsDisplayPanel extends JPanel {
 
         for (int i = firstIndex; ; i = (i + 1) % n) {
             final EncounterSlot slot = EncounterSlot.values()[i];
-            final JPanel bar = slotColorBars.get(i);
-            if (i == likeliestIndex) {
-                bar.setBackground(SlotPalette.likelyAccent(slot));
-                bar.setPreferredSize(new Dimension(0, barLikeliestPx));
+            final TargetAwareSlotColorBar bar = slotColorBars.get(i);
+            if (encounterModel.getTargetSlots().contains(slot)) {
+                bar.setTone(SlotBarTone.IDLE);
+                bar.setBarHeightPx(i == likeliestIndex ? barLikeliestPx : barSuggestedPx);
+            } else if (i == likeliestIndex) {
+                bar.setTone(SlotBarTone.SUGGESTED_LIKELIEST);
+                bar.setBarHeightPx(barLikeliestPx);
             } else {
-                bar.setBackground(SlotPalette.nearLikelyAccent(slot));
-                bar.setPreferredSize(new Dimension(0, barSuggestedPx));
+                bar.setTone(SlotBarTone.SUGGESTED_NEAR);
+                bar.setBarHeightPx(barSuggestedPx);
             }
-
             final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, lastIndex, likeliestIndex, i, n);
-            final JPanel amber = suggestionAmberBars.get(i);
-            amber.setOpaque(true);
-            amber.setBackground(SuggestionStyle.amberSuggestionShade(d));
-            amber.setPreferredSize(new Dimension(0, suggestionAmberH));
+            final SlotSuggestionStrip amber = suggestionAmberBars.get(i);
+            amber.configureSuggestion(
+                    encounterModel, slot, buttons.get(i).isSelected(), d, suggestionAmberH);
 
             if (i == lastIndex) {
                 break;
@@ -315,14 +329,204 @@ public class SlotsDisplayPanel extends JPanel {
         });
     }
 
-    private void applyIdleBar(final JPanel bar, final EncounterSlot slot) {
-        bar.setBackground(SlotPalette.mutedFillColor(slot));
-        bar.setPreferredSize(new Dimension(0, barIdlePx));
+    private void applyIdleBar(final TargetAwareSlotColorBar bar) {
+        bar.setTone(SlotBarTone.IDLE);
+        bar.setBarHeightPx(barIdlePx);
     }
 
-    private void applyIdleAmberBar(final JPanel bar) {
-        bar.setOpaque(false);
+    private enum SlotBarTone {
+        IDLE,
+        SUGGESTED_LIKELIEST,
+        SUGGESTED_NEAR
+    }
+
+    /**
+     * Muted / suggested slot tints, or the same target green as {@link EncounterWheel} when this column is a target.
+     */
+    private static final class TargetAwareSlotColorBar extends JPanel {
+
+        private final EncounterWheelModel model;
+        private final EncounterSlot slot;
+        private SlotBarTone tone = SlotBarTone.IDLE;
+
+        TargetAwareSlotColorBar(final EncounterWheelModel model, final EncounterSlot slot) {
+            this.model = model;
+            this.slot = slot;
+            setOpaque(true);
+        }
+
+        void setTone(final SlotBarTone t) {
+            this.tone = t;
+            repaint();
+        }
+
+        void setBarHeightPx(final int px) {
+            setPreferredSize(new Dimension(0, px));
+        }
+
+        @Override
+        protected void paintComponent(final Graphics g) {
+            final Graphics2D g2 = (Graphics2D) g.create();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                final int w = getWidth();
+                final int h = getHeight();
+                if (w <= 0 || h <= 0) {
+                    return;
+                }
+                if (model.getTargetSlots().contains(slot)) {
+                    final boolean overlap = model.targetOverlapsUncertainty();
+                    final double oBlend = overlap ? model.getTargetUncertaintyOverlapPortionOfSlot() : 1.0;
+                    g2.setColor(DsumEncounterPaint.overlapStrengthGreen(115, 235, 125, 42, 185, 62, oBlend));
+                    g2.fillRect(0, 0, w, h);
+                    return;
+                }
+                final Color c =
+                        switch (tone) {
+                            case IDLE -> SlotPalette.mutedFillColor(slot);
+                            case SUGGESTED_LIKELIEST -> SlotPalette.likelyAccent(slot);
+                            case SUGGESTED_NEAR -> SlotPalette.nearLikelyAccent(slot);
+                        };
+                g2.setColor(c);
+                g2.fillRect(0, 0, w, h);
+            } finally {
+                g2.dispose();
+            }
+        }
+    }
+
+    private void applyIdleAmberBar(final SlotSuggestionStrip bar) {
+        bar.setIdle();
         bar.setPreferredSize(new Dimension(0, suggestionAmberH));
+    }
+
+    /**
+     * Thin suggestion strip under the slot colour bar: paints only DSum sub-ranges where the slot overlaps the
+     * uncertainty wedge (aligned with the wheel / linear bar).
+     */
+    private static final class SlotSuggestionStrip extends JPanel {
+
+        private boolean idle = true;
+        private EncounterWheelModel model;
+        private EncounterSlot slot;
+        private boolean targetGreen;
+        private int distance;
+
+        SlotSuggestionStrip() {
+            setOpaque(false);
+        }
+
+        void setIdle() {
+            idle = true;
+            slot = null;
+            model = null;
+            setOpaque(false);
+            repaint();
+        }
+
+        void configureSuggestion(
+                final EncounterWheelModel model,
+                final EncounterSlot slot,
+                final boolean targetGreen,
+                final int distanceFromLikeliest,
+                final int barH) {
+            idle = false;
+            this.model = model;
+            this.slot = slot;
+            this.targetGreen = targetGreen;
+            this.distance = distanceFromLikeliest;
+            setOpaque(true);
+            setPreferredSize(new Dimension(0, barH));
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(final Graphics g) {
+            super.paintComponent(g);
+            if (idle || slot == null || model == null) {
+                return;
+            }
+            final OptionalDouble innerOv = model.encounterInnerWedgeOverlapPortionOfSlot(slot);
+            final OptionalDouble outerOv = model.encounterOuterOnlyWedgeOverlapPortionOfSlot(slot);
+            final List<int[]> innerSegs = model.suggestedInnerWedgeDsumSegmentsForSlot(slot);
+            final List<int[]> outerSegs = model.suggestedOuterOnlyWedgeDsumSegmentsForSlot(slot);
+            final Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            final int w = getWidth();
+            final int h = getHeight();
+            if (w <= 0 || h <= 0) {
+                return;
+            }
+            final int sLo = slot.min();
+            final int span = slot.max() - slot.min() + 1;
+            final boolean hasInner = innerOv.isPresent() && innerOv.getAsDouble() > 1e-9;
+            final boolean hasOuter = outerOv.isPresent() && outerOv.getAsDouble() > 1e-9;
+
+            if (!hasInner && !hasOuter) {
+                final Triplet<EncounterSlot, EncounterSlot, EncounterSlot> sug = model.getSuggestedSlots();
+                if (model.suggestedRunHasAnyWedgeOverlap(sug)) {
+                    return;
+                }
+                final Color c = targetGreen
+                        ? SuggestionStyle.greenTargetSuggestionStrip(distance, innerOv, outerOv)
+                        : SuggestionStyle.amberSuggestedAmberBar(distance, innerOv, outerOv);
+                g2.setColor(c);
+                g2.fillRect(0, 0, w, h);
+                return;
+            }
+
+            if (targetGreen) {
+                if (hasOuter) {
+                    final Color c = SuggestionStyle.greenTargetSuggestionStrip(
+                            distance, OptionalDouble.empty(), outerOv);
+                    fillLayer(g2, w, h, sLo, span, outerSegs, c, hasOuter);
+                }
+                if (hasInner) {
+                    final Color c = SuggestionStyle.greenTargetSuggestionStrip(distance, innerOv, OptionalDouble.empty());
+                    fillLayer(g2, w, h, sLo, span, innerSegs, c, hasInner);
+                }
+            } else {
+                if (hasOuter) {
+                    final Color c = SuggestionStyle.amberSuggestedAmberBar(
+                            distance, OptionalDouble.empty(), outerOv);
+                    fillLayer(g2, w, h, sLo, span, outerSegs, c, hasOuter);
+                }
+                if (hasInner) {
+                    final Color c = SuggestionStyle.amberSuggestedAmberBar(distance, innerOv, OptionalDouble.empty());
+                    fillLayer(g2, w, h, sLo, span, innerSegs, c, hasInner);
+                }
+            }
+        }
+
+        private static void fillLayer(
+                final Graphics2D g2,
+                final int w,
+                final int h,
+                final int sLo,
+                final int span,
+                final List<int[]> segs,
+                final Color color,
+                final boolean hasLayer) {
+            g2.setColor(color);
+            if (!hasLayer) {
+                return;
+            }
+            if (segs.isEmpty()) {
+                g2.fillRect(0, 0, w, h);
+                return;
+            }
+            for (final int[] seg : segs) {
+                final int lo = seg[0];
+                final int hi = seg[1];
+                int x0 = (int) Math.floor((lo - sLo) / (double) span * w);
+                int x1 = (int) Math.ceil((hi - sLo + 1) / (double) span * w);
+                x0 = Math.max(0, Math.min(w, x0));
+                x1 = Math.max(0, Math.min(w, x1));
+                if (x1 > x0) {
+                    g2.fillRect(x0, 0, x1 - x0, h);
+                }
+            }
+        }
     }
 
     @Override

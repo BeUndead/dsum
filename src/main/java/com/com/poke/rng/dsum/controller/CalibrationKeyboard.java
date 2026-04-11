@@ -31,7 +31,6 @@ public final class CalibrationKeyboard {
                  KeyEvent.VK_MINUS, KeyEvent.VK_EQUALS,
                  KeyEvent.VK_OPEN_BRACKET, KeyEvent.VK_CLOSE_BRACKET,
                  KeyEvent.VK_DELETE,
-                 KeyEvent.VK_F2,
                  KeyEvent.VK_P -> true;
             default -> false;
         };
@@ -45,10 +44,6 @@ public final class CalibrationKeyboard {
         final boolean shift = (modifiersEx & InputEvent.SHIFT_DOWN_MASK) != 0;
 
         switch (keyCode) {
-            case KeyEvent.VK_F2 -> {
-                model.setSpaceEncounterPreviewVisible(!model.isSpaceEncounterPreviewVisible());
-                requestRepaint.run();
-            }
             case KeyEvent.VK_P -> {
                 if (shift) {
                     return;

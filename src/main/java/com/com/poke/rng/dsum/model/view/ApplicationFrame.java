@@ -1,22 +1,29 @@
 package com.com.poke.rng.dsum.model.view;
 
 import com.com.poke.rng.dsum.audio.OverlapHumPlayer;
-import com.com.poke.rng.dsum.constants.DsumPreset;
+import com.com.poke.rng.dsum.config.DsumAppSettings;
+import com.com.poke.rng.dsum.config.DsumConfigStore;
+import com.com.poke.rng.dsum.config.DsumLoadedConfig;
+import com.com.poke.rng.dsum.config.EncounterSetupPreset;
 import com.com.poke.rng.dsum.constants.EncounterSlot;
 import com.com.poke.rng.dsum.constants.Game;
 import com.com.poke.rng.dsum.constants.Route;
 import com.com.poke.rng.dsum.controller.EncounterWheelController;
 import com.com.poke.rng.dsum.model.EncounterWheelModel;
-import com.com.poke.rng.dsum.model.OverworldMovementMode;
 import com.com.poke.rng.dsum.util.SpriteImageUtil;
 import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.List;
 
 public final class ApplicationFrame extends JFrame {
+
+    private final EncounterWheelModel model;
 
     private final JPanel themeAppearanceChip;
     private final JPanel viewLayoutChip;
@@ -33,26 +40,41 @@ public final class ApplicationFrame extends JFrame {
     private final EncounterWheelController wheelController;
 
     public ApplicationFrame() {
-        final Game initialGame = Game.RED;
-        final Route initialRoute = Route.SAFARI_ZONE_CENTER;
-        final EncounterSlot initialTarget = EncounterSlot._9;
-        final boolean initialPika = true;
-        final OverworldMovementMode initialMovementMode = OverworldMovementMode.BIKE;
-        final int initialLeadLevel = 70;
+        final DsumLoadedConfig loaded = loadStartupSettings();
+        final DsumAppSettings cfg = loaded.appSettings();
 
-        final EncounterWheelModel model = new EncounterWheelModel(initialTarget, initialGame);
-        model.setRoute(initialRoute);
+        final EncounterSlot initialTarget =
+                cfg.targetSlots().isEmpty() ? EncounterSlot._9 : cfg.targetSlots().get(0);
+        model = new EncounterWheelModel(initialTarget, cfg.game());
+        model.setRoute(cfg.route());
+        model.setPikaLead(cfg.pikaLead());
+        model.setLeadLevel(cfg.leadLevel());
+        model.setShowOuterRbCycleUncertaintyWedge(cfg.showOuterRbCycleUncertaintyBand());
+        model.modifyYellowOverworldDsumCycleModifier(cfg.modifierUi());
+
         wheel = new EncounterWheel(model);
         wheelBar = new EncounterWheelBar(model);
 
-        slotsDisplayPanel = new SlotsDisplayPanel(initialGame, initialRoute, initialTarget, model::setTargetSlots);
+        slotsDisplayPanel =
+                new SlotsDisplayPanel(cfg.game(), cfg.route(), initialTarget, model, model::setTargetSlots);
+        slotsDisplayPanel.applyPresetTargets(cfg.targetSlots());
 
         wheelController =
-                new EncounterWheelController(model, new OverlapHumPlayer(), slotsDisplayPanel::setSuggestedSlots, wheel, wheelBar);
+                new EncounterWheelController(
+                        model,
+                        new OverlapHumPlayer(),
+                        slotsDisplayPanel::setSuggestedSlots,
+                        wheel,
+                        wheelBar,
+                        slotsDisplayPanel);
         model.setOnTargetSlotsChanged(wheelController::notePostConfiguration);
         slotsSelectorPanel = new SlotsSelectorPanel(
-                initialGame, initialRoute, initialPika, initialMovementMode,
-                initialLeadLevel,
+                cfg.game(), cfg.route(), cfg.pikaLead(),
+                cfg.leadLevel(),
+                cfg.modifierUi(),
+                cfg.showOuterRbCycleUncertaintyBand(),
+                loaded.userPresets(),
+                this::promptAndSaveCurrentAsUserPreset,
                 game -> {
                     slotsDisplayPanel.setGame(game);
                     model.setGame(game);
@@ -65,9 +87,13 @@ public final class ApplicationFrame extends JFrame {
                 model::modifyYellowOverworldDsumCycleModifier,
                 model::setLeadLevel,
                 wheelController::setSoundMuted,
-                model::setOverworldMovementMode,
+                b -> {
+                    model.setShowOuterRbCycleUncertaintyWedge(b);
+                    wheel.repaint();
+                    wheelBar.repaint();
+                },
                 wheelController::requestCalibrationSurfaceFocus,
-                preset -> slotsDisplayPanel.applyPresetTargets(List.of(preset.targetSlot()))
+                slotsDisplayPanel::applyPresetTargets
         );
 
         final LeadingToolbarParts leadingToolbar = buildLeadingToolbar();
@@ -117,6 +143,98 @@ public final class ApplicationFrame extends JFrame {
 
         SwingUtilities.invokeLater(wheel::requestFocusInWindow);
         wheelController.start();
+
+        installSaveConfigShortcut();
+    }
+
+    private static DsumLoadedConfig loadStartupSettings() {
+        try {
+            return DsumConfigStore.loadOrCreate();
+        } catch (final IOException e) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Could not read or create config at\n" + DsumConfigStore.configFilePath() + "\n\n" + e.getMessage(),
+                    "DSum config",
+                    JOptionPane.WARNING_MESSAGE);
+            return new DsumLoadedConfig(DsumAppSettings.defaults(), List.of());
+        }
+    }
+
+    private void promptAndSaveCurrentAsUserPreset() {
+        final String label =
+                JOptionPane.showInputDialog(this, "Menu label for this preset:", "Add preset", JOptionPane.PLAIN_MESSAGE);
+        if (label == null) {
+            return;
+        }
+        final String trimmed = label.trim();
+        if (trimmed.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this, "Enter a non-empty label.", "Add preset", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        final Route route = model.getRoute();
+        if (route == null) {
+            JOptionPane.showMessageDialog(this, "Route is not set.", "Add preset", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        final EncounterSetupPreset preset =
+                new EncounterSetupPreset(
+                        trimmed,
+                        model.getGame(),
+                        route,
+                        model.getLeadLevel(),
+                        model.isPikaLead(),
+                        model.getCycleModifierUiValue(),
+                        model.getTargetSlots());
+        try {
+            DsumConfigStore.appendUserPreset(DsumConfigStore.configFilePath(), preset);
+            slotsSelectorPanel.addUserPreset(preset);
+        } catch (final IOException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Could not save preset to\n" + DsumConfigStore.configFilePath() + "\n\n" + e.getMessage(),
+                    "Add preset",
+                    JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    private void installSaveConfigShortcut() {
+        final KeyStroke stroke =
+                KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx());
+        getRootPane()
+                .getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(stroke, "dsum.saveConfig");
+        getRootPane()
+                .getActionMap()
+                .put(
+                        "dsum.saveConfig",
+                        new AbstractAction() {
+                            @Override
+                            public void actionPerformed(final ActionEvent e) {
+                                saveConfigToDisk();
+                            }
+                        });
+    }
+
+    private void saveConfigToDisk() {
+        try {
+            DsumConfigStore.write(
+                    DsumConfigStore.configFilePath(),
+                    DsumConfigStore.fromModelSnapshot(
+                            model.getGame(),
+                            model.getRoute(),
+                            model.getTargetSlots(),
+                            model.getCycleModifierUiValue(),
+                            model.isPikaLead(),
+                            model.getLeadLevel(),
+                            model.isShowOuterRbCycleUncertaintyWedge()));
+        } catch (final IOException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Could not save config to\n" + DsumConfigStore.configFilePath() + "\n\n" + e.getMessage(),
+                    "Save config",
+                    JOptionPane.WARNING_MESSAGE);
+        }
     }
 
     private void toggleRouteControlsExpansion() {

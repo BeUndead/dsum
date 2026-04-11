@@ -8,6 +8,8 @@ import com.com.poke.rng.dsum.util.Triplet;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
+import java.util.OptionalDouble;
 
 /**
  * Linear, horizontally wrapping view of the DSum cycle: the same slot colours as the wheel scroll sideways and
@@ -231,27 +233,60 @@ public final class EncounterWheelBar extends JPanel {
         if (t == null) {
             return;
         }
+        // Match EncounterWheel suggested arc: omit amber overlay when the grey uncertainty band is shown (field mode).
+        if (model.getCalibratedSlot() != null && !model.isCalibrating()) {
+            return;
+        }
         final int firstIndex = t.first().ordinal();
         final int likeliestIndex = t.second().ordinal();
         final int end = t.third().ordinal();
         final int n = EncounterSlot.values().length;
+        final boolean anyWedgeInRun = model.suggestedRunHasAnyWedgeOverlap(t);
         final Composite oldC = g.getComposite();
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.32f));
 
         int idx = firstIndex;
         while (true) {
-            final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
-            g.setColor(SuggestionStyle.amberSuggestionFillOpaque(d));
             final EncounterSlot slot = EncounterSlot.values()[idx];
-            final double x0 = translate + (slot.min() / (double) DSUM_RANGE) * periodPx;
-            final double x1 = translate + ((slot.max() + 1) / (double) DSUM_RANGE) * periodPx;
-            for (int k = -3; k <= 3; k++) {
-                final int ix0 = (int) Math.floor(x0 + k * periodPx);
-                final int ix1 = (int) Math.ceil(x1 + k * periodPx);
-                final int clipL = Math.max(0, ix0);
-                final int clipR = Math.min(viewW, ix1);
-                if (clipR > clipL) {
-                    g.fillRect(clipL, bandY - 2, clipR - clipL, bandH + 4);
+            final int d = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
+            final OptionalDouble inner = model.encounterInnerWedgeOverlapPortionOfSlot(slot);
+            final OptionalDouble outerOnly = model.encounterOuterOnlyWedgeOverlapPortionOfSlot(slot);
+            final List<int[]> outerSegs = model.suggestedOuterOnlyWedgeDsumSegmentsForSlot(slot);
+            final List<int[]> innerSegs = model.suggestedInnerWedgeDsumSegmentsForSlot(slot);
+            final boolean hasInnerPaint = inner.isPresent() && inner.getAsDouble() > 1e-9;
+            final boolean hasOuterPaint = outerOnly.isPresent() && outerOnly.getAsDouble() > 1e-9;
+            if (!hasInnerPaint && !hasOuterPaint) {
+                if (!anyWedgeInRun) {
+                    g.setColor(SuggestionStyle.amberSuggestionFillOpaqueFromSuggestedLayers(d, inner, outerOnly));
+                    fillSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, slot.min(), slot.max());
+                }
+            } else {
+                final Color outerFill =
+                        SuggestionStyle.amberSuggestionFillOpaqueFromSuggestedLayers(
+                                d, OptionalDouble.empty(), outerOnly);
+                if (hasOuterPaint) {
+                    if (outerSegs.isEmpty()) {
+                        g.setColor(outerFill);
+                        fillSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, slot.min(), slot.max());
+                    } else {
+                        for (final int[] seg : outerSegs) {
+                            g.setColor(outerFill);
+                            fillSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, seg[0], seg[1]);
+                        }
+                    }
+                }
+                final Color innerFill =
+                        SuggestionStyle.amberSuggestionFillOpaqueFromSuggestedLayers(d, inner, OptionalDouble.empty());
+                if (hasInnerPaint) {
+                    if (innerSegs.isEmpty()) {
+                        g.setColor(innerFill);
+                        fillSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, slot.min(), slot.max());
+                    } else {
+                        for (final int[] seg : innerSegs) {
+                            g.setColor(innerFill);
+                            fillSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, seg[0], seg[1]);
+                        }
+                    }
                 }
             }
             if (idx == end) {
@@ -263,24 +298,97 @@ public final class EncounterWheelBar extends JPanel {
         g.setStroke(new BasicStroke(1.5f));
         idx = firstIndex;
         while (true) {
-            final int segD = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
-            g.setColor(SuggestionStyle.amberSuggestionStroke(segD));
             final EncounterSlot slot = EncounterSlot.values()[idx];
-            final double x0 = translate + (slot.min() / (double) DSUM_RANGE) * periodPx;
-            final double x1 = translate + ((slot.max() + 1) / (double) DSUM_RANGE) * periodPx;
-            for (int k = -3; k <= 3; k++) {
-                final int ix0 = (int) Math.floor(x0 + k * periodPx);
-                final int ix1 = (int) Math.ceil(x1 + k * periodPx);
-                final int clipL = Math.max(0, ix0);
-                final int clipR = Math.min(viewW, ix1);
-                if (clipR > clipL) {
-                    g.drawRect(clipL, bandY - 2, clipR - clipL, bandH + 3);
+            final int segD = SuggestionStyle.segmentDistanceFromLikeliest(firstIndex, end, likeliestIndex, idx, n);
+            final OptionalDouble innerS = model.encounterInnerWedgeOverlapPortionOfSlot(slot);
+            final OptionalDouble outerS = model.encounterOuterOnlyWedgeOverlapPortionOfSlot(slot);
+            final List<int[]> outerSegs = model.suggestedOuterOnlyWedgeDsumSegmentsForSlot(slot);
+            final List<int[]> innerSegs = model.suggestedInnerWedgeDsumSegmentsForSlot(slot);
+            final boolean hasInnerPaint = innerS.isPresent() && innerS.getAsDouble() > 1e-9;
+            final boolean hasOuterPaint = outerS.isPresent() && outerS.getAsDouble() > 1e-9;
+            if (!hasInnerPaint && !hasOuterPaint) {
+                if (!anyWedgeInRun) {
+                    g.setColor(SuggestionStyle.amberSuggestionStrokeFromSuggestedLayers(segD, innerS, outerS));
+                    strokeSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, slot.min(), slot.max());
+                }
+            } else {
+                final Color outerStroke =
+                        SuggestionStyle.amberSuggestionStrokeFromSuggestedLayers(
+                                segD, OptionalDouble.empty(), outerS);
+                if (hasOuterPaint) {
+                    if (outerSegs.isEmpty()) {
+                        g.setColor(outerStroke);
+                        strokeSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, slot.min(), slot.max());
+                    } else {
+                        for (final int[] seg : outerSegs) {
+                            g.setColor(outerStroke);
+                            strokeSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, seg[0], seg[1]);
+                        }
+                    }
+                }
+                final Color innerStroke =
+                        SuggestionStyle.amberSuggestionStrokeFromSuggestedLayers(
+                                segD, innerS, OptionalDouble.empty());
+                if (hasInnerPaint) {
+                    if (innerSegs.isEmpty()) {
+                        g.setColor(innerStroke);
+                        strokeSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, slot.min(), slot.max());
+                    } else {
+                        for (final int[] seg : innerSegs) {
+                            g.setColor(innerStroke);
+                            strokeSuggestedDsumSpan(g, translate, periodPx, viewW, bandY, bandH, seg[0], seg[1]);
+                        }
+                    }
                 }
             }
             if (idx == end) {
                 break;
             }
             idx = (idx + 1) % n;
+        }
+    }
+
+    private static void fillSuggestedDsumSpan(
+            final Graphics2D g,
+            final double translate,
+            final double periodPx,
+            final int viewW,
+            final int bandY,
+            final int bandH,
+            final int lo,
+            final int hi) {
+        final double x0 = translate + (lo / (double) DSUM_RANGE) * periodPx;
+        final double x1 = translate + ((hi + 1) / (double) DSUM_RANGE) * periodPx;
+        for (int k = -3; k <= 3; k++) {
+            final int ix0 = (int) Math.floor(x0 + k * periodPx);
+            final int ix1 = (int) Math.ceil(x1 + k * periodPx);
+            final int clipL = Math.max(0, ix0);
+            final int clipR = Math.min(viewW, ix1);
+            if (clipR > clipL) {
+                g.fillRect(clipL, bandY - 2, clipR - clipL, bandH + 4);
+            }
+        }
+    }
+
+    private static void strokeSuggestedDsumSpan(
+            final Graphics2D g,
+            final double translate,
+            final double periodPx,
+            final int viewW,
+            final int bandY,
+            final int bandH,
+            final int lo,
+            final int hi) {
+        final double x0 = translate + (lo / (double) DSUM_RANGE) * periodPx;
+        final double x1 = translate + ((hi + 1) / (double) DSUM_RANGE) * periodPx;
+        for (int k = -3; k <= 3; k++) {
+            final int ix0 = (int) Math.floor(x0 + k * periodPx);
+            final int ix1 = (int) Math.ceil(x1 + k * periodPx);
+            final int clipL = Math.max(0, ix0);
+            final int clipR = Math.min(viewW, ix1);
+            if (clipR > clipL) {
+                g.drawRect(clipL, bandY - 2, clipR - clipL, bandH + 3);
+            }
         }
     }
 
@@ -342,11 +450,37 @@ public final class EncounterWheelBar extends JPanel {
         if (model.getCalibratedSlot() == null || model.isCalibrating()) {
             return;
         }
-        final double extentDeg = model.getUncertaintyWedgeExtentDeg();
         final double dCenter = needleCycleFraction(model.getDisplayAngleDeg()) * DSUM_RANGE;
-        final double halfWd = (extentDeg / 360.0) * (DSUM_RANGE / 2.0);
-        final double d0 = dCenter - halfWd;
-        final double d1 = dCenter + halfWd;
+        if (model.isDrawingOuterRbCycleUncertaintyBand()) {
+            final double negDeg = model.getUncertaintyWedgeExtentNegDeg();
+            final double posDeg = model.getUncertaintyWedgeExtentPosDeg();
+            final double wdNeg = (negDeg / 360.0) * DSUM_RANGE;
+            final double wdPos = (posDeg / 360.0) * DSUM_RANGE;
+            drawUncertaintyBandStrip(
+                    g, translate, periodPx, viewW, bandY, bandH, dCenter - wdNeg, dCenter + wdPos,
+                    UiTheme.UNCERTAINTY_OUTER_FILL, UiTheme.UNCERTAINTY_OUTER_STROKE, 1.25f);
+        }
+        final double inNeg = model.getInnerUncertaintyWedgeExtentNegDeg();
+        final double inPos = model.getInnerUncertaintyWedgeExtentPosDeg();
+        final double iWdNeg = (inNeg / 360.0) * DSUM_RANGE;
+        final double iWdPos = (inPos / 360.0) * DSUM_RANGE;
+        drawUncertaintyBandStrip(
+                g, translate, periodPx, viewW, bandY, bandH, dCenter - iWdNeg, dCenter + iWdPos,
+                UiTheme.UNCERTAINTY_FILL, UiTheme.UNCERTAINTY_STROKE, 1.75f);
+    }
+
+    private static void drawUncertaintyBandStrip(
+            final Graphics2D g,
+            final double translate,
+            final double periodPx,
+            final int viewW,
+            final int bandY,
+            final int bandH,
+            final double d0,
+            final double d1,
+            final Color fill,
+            final Color stroke,
+            final float strokeWidth) {
         final double x0 = translate + (d0 / DSUM_RANGE) * periodPx;
         final double x1 = translate + (d1 / DSUM_RANGE) * periodPx;
         for (int k = -3; k <= 3; k++) {
@@ -357,10 +491,10 @@ public final class EncounterWheelBar extends JPanel {
             if (clipR <= clipL) {
                 continue;
             }
-            g.setColor(UiTheme.UNCERTAINTY_FILL);
+            g.setColor(fill);
             g.fillRect(clipL, bandY - 1, clipR - clipL, bandH + 2);
-            g.setColor(UiTheme.UNCERTAINTY_STROKE);
-            g.setStroke(new BasicStroke(1.75f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER));
+            g.setColor(stroke);
+            g.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER));
             g.drawRect(clipL, bandY - 1, clipR - clipL, bandH + 1);
         }
     }

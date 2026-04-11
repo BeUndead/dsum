@@ -30,7 +30,8 @@ public final class EncounterWheelController implements NativeKeyListener {
 
     private final Consumer<Triplet<EncounterSlot, EncounterSlot, EncounterSlot>> onSuggestedChange;
 
-    private Triplet<EncounterSlot, EncounterSlot, EncounterSlot> suggestedSlots;
+    /** Latest suggested triplet; written each tick on the Swing timer thread (volatile for safe reads from paint). */
+    private volatile Triplet<EncounterSlot, EncounterSlot, EncounterSlot> suggestedSlots;
     /** Previous tick had overlap hum playing (respecting mute / silence). */
     private volatile boolean lastHumActive;
 
@@ -304,7 +305,6 @@ public final class EncounterWheelController implements NativeKeyListener {
             case NativeKeyEvent.VC_OPEN_BRACKET -> KeyEvent.VK_OPEN_BRACKET;
             case NativeKeyEvent.VC_CLOSE_BRACKET -> KeyEvent.VK_CLOSE_BRACKET;
             case NativeKeyEvent.VC_DELETE -> KeyEvent.VK_DELETE;
-            case NativeKeyEvent.VC_F2 -> KeyEvent.VK_F2;
             case NativeKeyEvent.VC_P -> KeyEvent.VK_P;
             default -> raw;
         };
