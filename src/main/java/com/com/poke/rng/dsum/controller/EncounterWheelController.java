@@ -199,7 +199,7 @@ public final class EncounterWheelController implements NativeKeyListener {
         if (SwingUtilities.getAncestorOfClass(JPopupMenu.class, focusOwner) != null) {
             return false;
         }
-        if (!CalibrationKeyboard.isCalibrationKey(e.getKeyCode())) {
+        if (!CalibrationKeyboard.isCalibrationDispatchKey(e.getKeyCode(), model.isCalibrating())) {
             return false;
         }
         calibrationKeys.handleKeyCommand(e.getKeyCode(), e.getModifiersEx());
@@ -218,7 +218,8 @@ public final class EncounterWheelController implements NativeKeyListener {
         if (e.getKeyCode() == KeyEvent.VK_SPACE || e.getKeyCode() == KeyEvent.VK_P) {
             return true;
         }
-        return model.isCalibrating() && CalibrationKeyboard.isCalibrationKey(e.getKeyCode());
+        return model.isCalibrating()
+                && CalibrationKeyboard.isCalibrationDispatchKey(e.getKeyCode(), model.isCalibrating());
     }
 
     public void setSoundMuted(final boolean muted) {

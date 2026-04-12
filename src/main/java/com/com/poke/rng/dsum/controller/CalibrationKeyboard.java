@@ -36,6 +36,20 @@ public final class CalibrationKeyboard {
         };
     }
 
+    /**
+     * Foreground routing: {@code R}/{@code B}/{@code A}/{@code T}/{@code N} count as calibration input only while
+     * calibrating (post-clear timing before the slot digit).
+     */
+    public static boolean isCalibrationDispatchKey(final int keyCode, final boolean calibrating) {
+        return isCalibrationKey(keyCode)
+                || (calibrating
+                        && (keyCode == KeyEvent.VK_R
+                                || keyCode == KeyEvent.VK_B
+                                || keyCode == KeyEvent.VK_A
+                                || keyCode == KeyEvent.VK_T
+                                || keyCode == KeyEvent.VK_N));
+    }
+
     public void handleKeyCommand(final int keyCode, final int modifiersEx) {
         if ((modifiersEx & (InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK)) != 0) {
             return;
@@ -44,6 +58,51 @@ public final class CalibrationKeyboard {
         final boolean shift = (modifiersEx & InputEvent.SHIFT_DOWN_MASK) != 0;
 
         switch (keyCode) {
+            case KeyEvent.VK_R -> {
+                if (shift) {
+                    return;
+                }
+                if (model.isCalibrating()) {
+                    model.armPostClearRanAwayTiming();
+                    requestRepaint.run();
+                }
+            }
+            case KeyEvent.VK_B -> {
+                if (shift) {
+                    return;
+                }
+                if (model.isCalibrating()) {
+                    model.armPostClearSentToBoxTiming();
+                    requestRepaint.run();
+                }
+            }
+            case KeyEvent.VK_A -> {
+                if (shift) {
+                    return;
+                }
+                if (model.isCalibrating()) {
+                    model.armPostClearNicknameTiming();
+                    requestRepaint.run();
+                }
+            }
+            case KeyEvent.VK_T -> {
+                if (shift) {
+                    return;
+                }
+                if (model.isCalibrating()) {
+                    model.armPostClearJoinPartyTiming();
+                    requestRepaint.run();
+                }
+            }
+            case KeyEvent.VK_N -> {
+                if (shift) {
+                    return;
+                }
+                if (model.isCalibrating()) {
+                    model.resetPostClearTimingToNormal();
+                    requestRepaint.run();
+                }
+            }
             case KeyEvent.VK_P -> {
                 if (shift) {
                     return;
