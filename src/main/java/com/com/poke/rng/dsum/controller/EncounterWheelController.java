@@ -20,6 +20,11 @@ import java.util.function.Consumer;
 
 public final class EncounterWheelController implements NativeKeyListener {
 
+    private static final int WIN_NATIVE_MINUS = 189;
+    private static final int WIN_NATIVE_EQUALS = 187;
+    private static final int WIN_NATIVE_OPEN_BRACKET = 219;
+    private static final int WIN_NATIVE_CLOSE_BRACKET = 221;
+    private static final int WIN_NATIVE_DELETE = 46;
     private static final int TIMER_MS = 16;
     /** Quiet period after changing target slots or finishing calibration (no encounters yet). */
     private static final long POST_CONFIGURE_SILENCE_NS = 1_500_000_000L;
@@ -289,23 +294,11 @@ public final class EncounterWheelController implements NativeKeyListener {
 
     private static int swingKeyCodeFromNativeRaw(final int raw) {
         return switch (raw) {
-            case NativeKeyEvent.VC_SPACE -> KeyEvent.VK_SPACE;
-            case NativeKeyEvent.VC_1 -> KeyEvent.VK_1;
-            case NativeKeyEvent.VC_2 -> KeyEvent.VK_2;
-            case NativeKeyEvent.VC_3 -> KeyEvent.VK_3;
-            case NativeKeyEvent.VC_4 -> KeyEvent.VK_4;
-            case NativeKeyEvent.VC_5 -> KeyEvent.VK_5;
-            case NativeKeyEvent.VC_6 -> KeyEvent.VK_6;
-            case NativeKeyEvent.VC_7 -> KeyEvent.VK_7;
-            case NativeKeyEvent.VC_8 -> KeyEvent.VK_8;
-            case NativeKeyEvent.VC_9 -> KeyEvent.VK_9;
-            case NativeKeyEvent.VC_0 -> KeyEvent.VK_0;
-            case NativeKeyEvent.VC_MINUS -> KeyEvent.VK_MINUS;
-            case NativeKeyEvent.VC_EQUALS -> KeyEvent.VK_EQUALS;
-            case NativeKeyEvent.VC_OPEN_BRACKET -> KeyEvent.VK_OPEN_BRACKET;
-            case NativeKeyEvent.VC_CLOSE_BRACKET -> KeyEvent.VK_CLOSE_BRACKET;
-            case NativeKeyEvent.VC_DELETE -> KeyEvent.VK_DELETE;
-            case NativeKeyEvent.VC_P -> KeyEvent.VK_P;
+            case WIN_NATIVE_MINUS -> KeyEvent.VK_MINUS;
+            case WIN_NATIVE_EQUALS -> KeyEvent.VK_EQUALS;
+            case WIN_NATIVE_OPEN_BRACKET -> KeyEvent.VK_OPEN_BRACKET;
+            case WIN_NATIVE_CLOSE_BRACKET -> KeyEvent.VK_CLOSE_BRACKET;
+            case WIN_NATIVE_DELETE -> KeyEvent.VK_DELETE;
             default -> raw;
         };
     }
