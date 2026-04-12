@@ -16,6 +16,20 @@ import java.util.OptionalDouble;
  */
 public class EncounterWheelModel {
 
+    /**
+     * While calibrating, {@code R}/{@code B}/{@code A}/{@code T} pick post-clear count-up frame counts for the next slot
+     * digit; whichever of those was pressed most recently wins. {@code N} restores default ({@link #NORMAL}).
+     */
+    public enum CalibratePostClearTiming {
+        NORMAL,
+        RAN_AWAY,
+        SENT_TO_BOX,
+        /** Hotkey {@code A}: nickname / alias screen. */
+        NICKNAME,
+        /** Hotkey {@code T}: join party / team. */
+        JOIN_PARTY
+    }
+
     // GameBoy's native frame rate.
     private static final double FRAME_RATE = 59.7275;
 
@@ -29,7 +43,7 @@ public class EncounterWheelModel {
     private static final double RB_OVERWORLD_CYCLE_LENGTH_MIN_FRAMES = 367.0;
     private static final double RB_OVERWORLD_CYCLE_LENGTH_MAX_FRAMES = 415.0;
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 775.1083333;
+    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.1083333;
 
     // Number of frames which the in-battle DSum cycle runs before the spiral battle entry animation ends.
     private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 100;
@@ -46,6 +60,11 @@ public class EncounterWheelModel {
     private static final long COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES = 43;
     // Number of frames which the in-battle DSum cycle runs after clearing 'Got away safely!'.
     private static final long COUNT_UP_AFTER_GOT_AWAY_FRAMES = 37;
+    // Number of frames which the in-battle DSum cycle runs after clearing 'Ran away!'.
+    private static final long COUNT_UP_AFTER_RUN_FRAMES = 73;
+    private static final long COUNT_UP_AFTER_SENT_TO_BOX_FRAMES = 23;
+    private static final long COUNT_UP_AFTER_JOIN_PARTY_FRAMES = 37;
+    private static final long COUNT_UP_AFTER_NICKNAME_FRAMES = 29;
 
     /**
      * After an encounter triggers, DSum keeps advancing at overworld rate for about this many frames before
@@ -65,7 +84,7 @@ public class EncounterWheelModel {
     private volatile double overworldDsumCycleModifierNs = 0.0;
 
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 781.6914894;
+    private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 788.6914894;
 
     // No count frames in yellow, since times are similar and go the same direction...
 
@@ -126,13 +145,23 @@ public class EncounterWheelModel {
     private volatile long rbOverworldElapsedForCycleUncertaintyNs;
     private volatile double angleDeg = 0.0;
     private volatile double manualAngleOffsetDeltaDeg;
-    /** When true, {@link #update(long)} does not advance time-based rotation (P toggles). Manual [ ] nudges still apply. */
+    /**
+     * When true, {@link #update(long)} does not advance time-based rotation in overworld or in battle ({@code P}
+     * toggles). {@link #battleStart(boolean)} and other mode changes do not clear this flag. Manual {@code [} /
+     * {@code ]} nudges still apply while paused.
+     */
     private volatile boolean simulationPaused;
     /**
      * Set when {@link #calibrateSlot} completes successfully; cleared by {@link #clearCalibrationState}. Drives
      * first-time “Calibrating” + hint chip vs later “Encounter” runs without the hint.
      */
     private volatile boolean hasCalibratedAtLeastOnce;
+    /**
+     * While calibrating: {@code R}/{@code B}/{@code A}/{@code T} arm alternate post-clear count-up lengths for the next
+     * {@link #calibrateSlot}; {@code N} clears to {@link CalibratePostClearTiming#NORMAL}. Cleared when the slot key is
+     * applied or by {@link #clearCalibrationState(long)}.
+     */
+    private volatile CalibratePostClearTiming postClearTiming = CalibratePostClearTiming.NORMAL;
 
     private volatile long battleEnterTime = -1;
     private volatile Triplet<Integer, Integer, Integer> rangeAtBattleStart = null;
@@ -470,7 +499,6 @@ public class EncounterWheelModel {
     }
 
     public void battleStart(final boolean altAnimation) {
-        simulationPaused = false;
         final long now = System.nanoTime();
         final long animationFrames = countUpFramesBeforeBattleVisible(altAnimation);
         assumedBattleAnimationFrames = animationFrames;
@@ -511,7 +539,48 @@ public class EncounterWheelModel {
         manualAngleOffsetDeltaDeg = 0;
         warningBeepPending = false;
         lastNow = now;
+        postClearTiming = CalibratePostClearTiming.NORMAL;
         refreshTargetOverlapApproachProgress();
+    }
+
+    /** While calibrating: next slot digit uses {@link #COUNT_UP_AFTER_RUN_FRAMES} (Ran away). */
+    public void armPostClearRanAwayTiming() {
+        if (battleEnterTime != -1) {
+            postClearTiming = CalibratePostClearTiming.RAN_AWAY;
+        }
+    }
+
+    /** While calibrating: next slot digit uses {@link #COUNT_UP_AFTER_SENT_TO_BOX_FRAMES}. */
+    public void armPostClearSentToBoxTiming() {
+        if (battleEnterTime != -1) {
+            postClearTiming = CalibratePostClearTiming.SENT_TO_BOX;
+        }
+    }
+
+    /** While calibrating: next slot digit uses {@link #COUNT_UP_AFTER_NICKNAME_FRAMES} (alias / nickname). */
+    public void armPostClearNicknameTiming() {
+        if (battleEnterTime != -1) {
+            postClearTiming = CalibratePostClearTiming.NICKNAME;
+        }
+    }
+
+    /** While calibrating: next slot digit uses {@link #COUNT_UP_AFTER_JOIN_PARTY_FRAMES} (join team). */
+    public void armPostClearJoinPartyTiming() {
+        if (battleEnterTime != -1) {
+            postClearTiming = CalibratePostClearTiming.JOIN_PARTY;
+        }
+    }
+
+    /** While calibrating: next slot digit uses default {@link #COUNT_UP_AFTER_GOT_AWAY_FRAMES} timing. */
+    public void resetPostClearTimingToNormal() {
+        if (battleEnterTime != -1) {
+            postClearTiming = CalibratePostClearTiming.NORMAL;
+        }
+    }
+
+    /** Which alternate post-clear timing is armed for the next slot key, if any. */
+    public CalibratePostClearTiming getPostClearTiming() {
+        return postClearTiming;
     }
 
     public void calibrateSlot(final int givenSlot) {
@@ -529,6 +598,16 @@ public class EncounterWheelModel {
         }
 
         final EncounterSlot slot = slots[slotIndex];
+        final long postClearCountUpFrames =
+                switch (postClearTiming) {
+                    case NORMAL -> COUNT_UP_AFTER_GOT_AWAY_FRAMES;
+                    case RAN_AWAY -> COUNT_UP_AFTER_RUN_FRAMES;
+                    case SENT_TO_BOX -> COUNT_UP_AFTER_SENT_TO_BOX_FRAMES;
+                    case NICKNAME -> COUNT_UP_AFTER_NICKNAME_FRAMES;
+                    case JOIN_PARTY -> COUNT_UP_AFTER_JOIN_PARTY_FRAMES;
+                };
+        postClearTiming = CalibratePostClearTiming.NORMAL;
+
         final int midDsum = (slot.min() + slot.max()) / 2;
         long timeInBattle = now - battleEnterTime;
 
@@ -545,12 +624,12 @@ public class EncounterWheelModel {
         double angleChangeInBattle = (timeInBattle / inBattleNs) * 360.0;
         // We're going to start reversing immediately, but the game keeps counting up for a few frames after we clear
         // the 'Got away safely!' message.  We account for that here with whatever this formula is...
-        // We /would/ have kept counting up for COUNT_UP_AFTER_GOT_AWAY_FRAMES, at the in battle rate.  But for that
+        // We /would/ have kept counting up for postClearCountUpFrames, at the in battle rate.  But for that
         // number of frames instead, we would be counting down.
-        // This results in the wheel being wrong for the COUNT_UP_AFTER_GOT_AWAY frames...  But you can't get an
+        // This results in the wheel being wrong for those frames...  But you can't get an
         // encounter in that window anyways - and makes the maths much simpler.
-        final double correctUpAngle = ((COUNT_UP_AFTER_GOT_AWAY_FRAMES * ONE_FRAME_NS) / inBattleNs) * 360.0;
-        final double incorrectDownAngle = (((COUNT_UP_AFTER_GOT_AWAY_FRAMES - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
+        final double correctUpAngle = ((postClearCountUpFrames * ONE_FRAME_NS) / inBattleNs) * 360.0;
+        final double incorrectDownAngle = (((postClearCountUpFrames - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
 
         angleChangeInBattle += (correctUpAngle + incorrectDownAngle);
 
@@ -568,7 +647,7 @@ public class EncounterWheelModel {
         uncertaintyBattleGrowthDeg = uncertaintyWedgeExtraDegForInBattleAngle(angleChangeInBattle);
         uncertaintyWedgeExtentDeltaDeg = 0;
         manualAngleOffsetDeltaDeg = 0;
-        overworldStartTime = now + (long) (COUNT_UP_AFTER_GOT_AWAY_FRAMES * ONE_FRAME_NS);
+        overworldStartTime = now + (long) (postClearCountUpFrames * ONE_FRAME_NS);
         refreshTargetOverlapApproachProgress();
     }
 
@@ -595,23 +674,30 @@ public class EncounterWheelModel {
         return simulationPaused;
     }
 
-    /** Toggle freeze of time-based DSum rotation (hotkey {@code P}). */
+    /** Toggle freeze of all time-based DSum rotation, overworld and in battle (hotkey {@code P}). */
     public void toggleSimulationPaused() {
         simulationPaused = !simulationPaused;
     }
 
     /**
      * Second line on the DSum readout chip: overworld vs in-battle vs uncalibrated, with optional {@code Paused ·}
-     * prefix when {@link #isSimulationPaused()}. After the first {@link #calibrateSlot}, in-battle shows
+     * prefix when {@link #isSimulationPaused()}. While calibrating, appends a short marker from {@link #getPostClearTiming()}
+     * when not {@link CalibratePostClearTiming#NORMAL}. After the first {@link #calibrateSlot}, in-battle shows
      * {@code Encounter} until {@link #clearCalibrationState}.
      */
     public String getDsumChipStateFootnote(final boolean compact) {
         final String base;
         if (isCalibrating()) {
-            base =
-                    hasCalibratedAtLeastOnce
-                            ? "Encounter"
-                            : (compact ? "Calibr." : "Calibrating");
+            String cal = hasCalibratedAtLeastOnce ? "Encounter" : (compact ? "Calibr." : "Calibrating");
+            cal +=
+                    switch (postClearTiming) {
+                        case NORMAL -> "";
+                        case RAN_AWAY -> compact ? " · R" : " · Ran away";
+                        case SENT_TO_BOX -> compact ? " · B" : " · Sent to box";
+                        case NICKNAME -> compact ? " · A" : " · Alias";
+                        case JOIN_PARTY -> compact ? " · T" : " · Join team";
+                    };
+            base = cal;
         } else if (getCalibratedSlot() == null) {
             base = compact ? "Uncalib." : "Uncalibrated";
         } else {
@@ -627,15 +713,23 @@ public class EncounterWheelModel {
     }
 
     /**
-     * Bottom-left hint chip (uncalibrated, or first {@link #calibrateSlot} only). Hidden during later encounters until
-     * {@link #clearCalibrationState}. Use {@code \\n} in full strings for line breaks.
+     * Bottom-left instruction chip while calibrating (slot key + optional {@code R}/{@code B}/{@code A}/{@code T}/
+     * {@code N} timing), or uncalibrated overworld hint. Otherwise {@code null}. Use {@code \\n} for line breaks.
      */
     public String getDsumInstructionChipText(final boolean compact) {
         if (isCalibrating()) {
             if (hasCalibratedAtLeastOnce) {
-                return null;
+                return compact
+                        ? "Press 0—10 · R/B/A/T/N"
+                        : "Press your slot for this encounter.\n"
+                                + "R Ran away · B sent to box · A alias · T join team\n"
+                                + "(before slot); last of R/B/A/T wins. N = normal Got away.";
             }
-            return compact ? "Press 0—10 for your slot" : "Press the number for the\nencounter slot you got\nwhen clearing 'Got away'.";
+            return compact
+                    ? "Press 0—10 for your slot\nR/B/A/T if needed · N normal"
+                    : "Press the number for the\nencounter slot you got\nwhen clearing 'Got away'.\n"
+                            + "R/B/A/T before your slot pick the post-clear timing\n"
+                            + "(Ran away, box, nickname, join team); last wins. N = normal.";
         }
         if (getCalibratedSlot() == null) {
             return compact ? "Encounter, then Space" : "Get an encounter,\nthen press Space\nwhen wipe ends.";

@@ -114,7 +114,13 @@ public final class EncounterWheelBar extends JPanel {
         final int tickH = tight ? 2 : Math.min(5, h / 18);
         final int tickTop = y;
         final int bandY = tickTop + tickH;
-        final int chipReserve = (tight ? 30 : 48) + (showInstruction ? (tight ? 16 : 10) : 0);
+        final int instructionLineCount =
+                showInstruction ? (int) instructionText.chars().filter(ch -> ch == '\n').count() + 1 : 0;
+        final int chipReserve =
+                (tight ? 30 : 48)
+                        + (showInstruction
+                                ? (tight ? 12 : 18) + instructionLineCount * (tight ? 11 : 14)
+                                : 0);
         final int bandH = Math.max(tight ? 16 : 22, h - bandY - chipReserve);
         final double periodPx = Math.max(w * 2.2, 560.0);
         final double translate = cx - needleCycleFraction(model.getDisplayAngleDeg()) * periodPx;
