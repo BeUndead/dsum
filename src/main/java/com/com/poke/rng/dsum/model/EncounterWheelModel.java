@@ -8,6 +8,7 @@ import com.com.poke.rng.dsum.util.Triplet;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalDouble;
 
 /**
@@ -69,9 +70,15 @@ public class EncounterWheelModel {
     /**
      * After an encounter triggers, DSum keeps advancing at overworld rate for about this many frames before
      * in-battle stepping fully applies (down in Red/Blue, up in Yellow — same signed period as {@link #update(long)}).
-     * Used in {@link #computeBattleEntryGeometry} for Space / encounter triplet math, not for the painted wheel angle.
+     * Used in {@link #computeBattleEntryGeometry} for blinds entry only; spiral entry uses
+     * {@link #ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES}.
      */
     private static final long ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES = 28;
+
+    /**
+     * Same role as {@link #ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES} when the route uses spiral battle entry (not blinds).
+     */
+    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES = 7;
 
     // Yellow:
     // Yellow's DSum is...  Interesting.
@@ -112,6 +119,12 @@ public class EncounterWheelModel {
      * total added width is twice this (e.g. 1.5 rotations → 4.5°/side → 9° total).
      */
     private static final double UNCERTAINTY_WEDGE_DEGREES_DELTA_PER_ROTATION = 2.0;
+
+    /**
+     * Extra ° on each side of the calibrated core when using inner suggested ∩ slot overlap
+     * ({@link #calibratedInnerWedgeFromSuggestionOverlap}).
+     */
+    private static final double OVERLAP_REFINED_INNER_WEDGE_PAD_DEG_PER_SIDE = 2.0;
 
     /** Over this lead time (seconds), the approach bar ramps from empty to full. */
     private static final double TARGET_OVERLAP_WARN_NS = 2e9;
@@ -178,6 +191,17 @@ public class EncounterWheelModel {
     private volatile double uncertaintyWedgeExtentDeltaDeg;
     /** Extra wedge width (total °) from in-battle rotations; see {@link #uncertaintyWedgeExtraDegForInBattleAngle}. */
     private volatile double uncertaintyBattleGrowthDeg;
+    /**
+     * When true (second+ calibration with suggestions and non-empty inner suggested ∩ slot overlap), calibrated core
+     * wedge span uses {@link #calibratedInnerOverlapSpanDeg} instead of the full {@link #calibratedSlot} span, still
+     * symmetric about the needle.
+     */
+    private volatile boolean calibratedInnerWedgeFromSuggestionOverlap;
+    /**
+     * Total inner wedge arc (°) from DSum overlap only, before growth / manual (see
+     * {@link #symmetricCalibratedWedgeCoreExtentDeg}).
+     */
+    private volatile double calibratedInnerOverlapSpanDeg;
 
     /** Cached in {@link #refreshTargetOverlapApproachProgress()} — not in paint (too expensive). */
     private volatile double targetOverlapApproachProgress;
@@ -295,6 +319,30 @@ public class EncounterWheelModel {
 
     private record BattleEntryGeometry(double angleAfterEntryCorrections, double encounterOffsetDeg) {}
 
+    /**
+     * Inner suggested arc ∩ slot: total hit cells and inclusive bounds of the longest contiguous run (angle anchor).
+     */
+    private record InnerSuggestedSlotOverlap(int totalCellCount, int anchorMin, int anchorMax) {
+        private double spanDeg() {
+            return (totalCellCount / (double) DSUM_RANGE) * 360.0;
+        }
+    }
+
+    /**
+     * In-battle window + overworld continuation (same as {@link #computeBattleEntryGeometry}). Maps encounter DSum to
+     * {@link #angleDeg} via {@code dsumFromAngle(angleDeg ± offset)} — see {@link #dsumTripletForEncounterAtAngle}.
+     */
+    private double encounterOffsetDegForBattleEntry(final long animationFrames) {
+        final Game game = this.game;
+        final double overworldNs = overworldCycleNs();
+        final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
+        final double angleDelta = (animationFrames * ONE_FRAME_NS) / inBattleNs * 360.0;
+        final long overworldContinuationFrames =
+                isBlinds ? ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES : ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES;
+        final double overworldLagDeg = (overworldContinuationFrames * ONE_FRAME_NS / overworldNs) * 360.0;
+        return game == Game.YELLOW ? angleDelta + overworldLagDeg : angleDelta - overworldLagDeg;
+    }
+
     /** Same geometry as {@link #battleStart(boolean)}: entry jumps + encounter rewind offset (does not mutate state). */
     private BattleEntryGeometry computeBattleEntryGeometry(final boolean altAnimation, final double overworldAngleDeg) {
         final Game game = this.game;
@@ -310,11 +358,7 @@ public class EncounterWheelModel {
         final double angleAfter =
                 overworldAngleDeg + correctUpAngle + incorrectDownAngle + correction;
         // Rewind by the same in-battle window as {@code battleEnterTime} (encounter → Space), not full spiral length.
-        final double angleDelta = (animationFrames * ONE_FRAME_NS) / inBattleNs * 360.0;
-        final double overworldLagDeg =
-                ((ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES) * ONE_FRAME_NS / overworldNs) * 360.0;
-        final double encounterOffsetDeg =
-                game == Game.YELLOW ? angleDelta + overworldLagDeg : angleDelta - overworldLagDeg;
+        final double encounterOffsetDeg = encounterOffsetDegForBattleEntry(animationFrames);
         return new BattleEntryGeometry(angleAfter, encounterOffsetDeg);
     }
 
@@ -336,6 +380,15 @@ public class EncounterWheelModel {
 
     private static double angleFromDsum(final int dsum) {
         return (dsum / (double) DSUM_RANGE) * 360.0;
+    }
+
+    /**
+     * Geometric centre of inclusive DSum cells {@code [vMin, vMax]} on the cycle — matches wheel slot
+     * {@code startDeg + extentDeg/2} (see {@code EncounterWheel#drawSlots}).
+     */
+    private static double battleStartAngleForVirtualInclusiveDsumRange(final int vMin, final int vMax) {
+        final double centerFrac = (vMin + vMax + 1) / (2.0 * DSUM_RANGE);
+        return centerFrac * 360.0;
     }
 
     private static int dsumFromAngle(final double angleDegrees) {
@@ -529,6 +582,8 @@ public class EncounterWheelModel {
     public void clearCalibrationState(final long now) {
         calibratedSlot = null;
         hasCalibratedAtLeastOnce = false;
+        calibratedInnerWedgeFromSuggestionOverlap = false;
+        calibratedInnerOverlapSpanDeg = 0.0;
         rbOverworldElapsedForCycleUncertaintyNs = 0;
         uncertaintyWedgeExtentDeltaDeg = 0;
         uncertaintyBattleGrowthDeg = 0;
@@ -609,6 +664,11 @@ public class EncounterWheelModel {
         postClearTiming = CalibratePostClearTiming.NORMAL;
 
         final int midDsum = (slot.min() + slot.max()) / 2;
+        final Triplet<Integer, Integer, Integer> innerSuggestedSnapshot = innerSuggestedRangeAtBattleStart;
+        final boolean refineFromSuggestions =
+                hasCalibratedAtLeastOnce && suggestedSlots != null && innerSuggestedSnapshot != null;
+        final Optional<InnerSuggestedSlotOverlap> slotOverlapOpt =
+                refineFromSuggestions ? computeInnerSuggestedSlotOverlap(slot, innerSuggestedSnapshot) : Optional.empty();
         long timeInBattle = now - battleEnterTime;
 
         if (route != null) {
@@ -633,7 +693,20 @@ public class EncounterWheelModel {
 
         angleChangeInBattle += (correctUpAngle + incorrectDownAngle);
 
-        final double angleAtBattleStart = angleFromDsum(midDsum);
+        /*
+         * Battle-start angleDeg must align with {@link #dsumTripletForEncounterAtAngle}: R/B uses
+         * dsumFromAngle(angleDeg + encounterOffsetDeg), Yellow uses dsumFromAngle(angleDeg - encounterOffsetDeg) for the
+         * encounter cell. Anchor angle is the cycle position for the slot / overlap centre as if offset were 0; undo it.
+         */
+        final double encounterOffsetDeg = encounterOffsetDegForBattleEntry(assumedBattleAnimationFrames);
+        final double anchorAngle =
+                slotOverlapOpt.map(
+                                o -> battleStartAngleForVirtualInclusiveDsumRange(o.anchorMin(), o.anchorMax()))
+                        .orElseGet(() -> angleFromDsum(midDsum));
+        final double angleAtBattleStart =
+                game == Game.YELLOW
+                        ? norm360(anchorAngle + encounterOffsetDeg)
+                        : norm360(anchorAngle - encounterOffsetDeg);
         final double newAngle = angleAtBattleStart + angleChangeInBattle;
 
         // Match {@link #update()} overworld: angleDeg += -((delta / overworldNs) * 360).
@@ -648,6 +721,13 @@ public class EncounterWheelModel {
         uncertaintyWedgeExtentDeltaDeg = 0;
         manualAngleOffsetDeltaDeg = 0;
         overworldStartTime = now + (long) (postClearCountUpFrames * ONE_FRAME_NS);
+        if (slotOverlapOpt.isPresent()) {
+            calibratedInnerWedgeFromSuggestionOverlap = true;
+            calibratedInnerOverlapSpanDeg = slotOverlapOpt.get().spanDeg();
+        } else {
+            calibratedInnerWedgeFromSuggestionOverlap = false;
+            calibratedInnerOverlapSpanDeg = 0.0;
+        }
         refreshTargetOverlapApproachProgress();
     }
 
@@ -947,12 +1027,14 @@ public class EncounterWheelModel {
     private void fillUncertaintyWedgeNegPosDeg(final double[] out) {
         if (calibratedSlot != null) {
             final double half = symmetricCalibratedWedgeCoreExtentDeg() * 0.5;
+            final double overlapPad =
+                    calibratedInnerWedgeFromSuggestionOverlap ? OVERLAP_REFINED_INNER_WEDGE_PAD_DEG_PER_SIDE : 0.0;
             if (showOuterRbCycleUncertaintyWedge && (game == Game.RED || game == Game.BLUE)) {
-                out[0] = half + rbOverworldCycleLengthUncertaintyNegDeg();
-                out[1] = half + rbOverworldCycleLengthUncertaintyPosDeg();
+                out[0] = half + overlapPad + rbOverworldCycleLengthUncertaintyNegDeg();
+                out[1] = half + overlapPad + rbOverworldCycleLengthUncertaintyPosDeg();
             } else {
-                out[0] = half;
-                out[1] = half;
+                out[0] = half + overlapPad;
+                out[1] = half + overlapPad;
             }
             normalizeNegPosTotalDeg(out);
             return;
@@ -963,8 +1045,10 @@ public class EncounterWheelModel {
     private void fillInnerUncertaintyWedgeNegPosDeg(final double[] out) {
         if (calibratedSlot != null) {
             final double half = symmetricCalibratedWedgeCoreExtentDeg() * 0.5;
-            out[0] = half;
-            out[1] = half;
+            final double overlapPad =
+                    calibratedInnerWedgeFromSuggestionOverlap ? OVERLAP_REFINED_INNER_WEDGE_PAD_DEG_PER_SIDE : 0.0;
+            out[0] = half + overlapPad;
+            out[1] = half + overlapPad;
             normalizeNegPosTotalDeg(out);
             return;
         }
@@ -992,8 +1076,12 @@ public class EncounterWheelModel {
     }
 
     private double symmetricCalibratedWedgeCoreExtentDeg() {
-        final double base =
-                ((calibratedSlot.max() - calibratedSlot.min() + 1) / (double) DSUM_RANGE) * 360.0;
+        final double base;
+        if (calibratedInnerWedgeFromSuggestionOverlap && calibratedInnerOverlapSpanDeg > 0.0) {
+            base = calibratedInnerOverlapSpanDeg;
+        } else {
+            base = ((calibratedSlot.max() - calibratedSlot.min() + 1) / (double) DSUM_RANGE) * 360.0;
+        }
         return base + uncertaintyBattleGrowthDeg + uncertaintyWedgeExtentDeltaDeg;
     }
 
@@ -1334,6 +1422,31 @@ public class EncounterWheelModel {
             return x >= lo && x <= hi;
         }
         return x >= lo || x <= hi;
+    }
+
+    private static Optional<InnerSuggestedSlotOverlap> computeInnerSuggestedSlotOverlap(
+            final EncounterSlot slot, final Triplet<Integer, Integer, Integer> innerSuggested) {
+        final int arcLo = innerSuggested.first() & (DSUM_RANGE - 1);
+        final int arcHi = innerSuggested.third() & (DSUM_RANGE - 1);
+        final List<int[]> segs = contiguousDsumHitsInLinearRange(slot.min(), slot.max(), arcLo, arcHi);
+        if (segs.isEmpty()) {
+            return Optional.empty();
+        }
+        int totalCnt = 0;
+        for (final int[] seg : segs) {
+            totalCnt += seg[1] - seg[0] + 1;
+        }
+        int[] best = segs.get(0);
+        int bestLen = best[1] - best[0] + 1;
+        for (int i = 1; i < segs.size(); i++) {
+            final int[] seg = segs.get(i);
+            final int len = seg[1] - seg[0] + 1;
+            if (len > bestLen) {
+                bestLen = len;
+                best = seg;
+            }
+        }
+        return Optional.of(new InnerSuggestedSlotOverlap(totalCnt, best[0], best[1]));
     }
 
     private static int countDsumValuesInInclusiveCircularArc(final int arcLo, final int arcHi) {
