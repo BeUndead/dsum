@@ -41,7 +41,7 @@ public class EncounterWheelModel {
 
     // Red/Blue:
     // Average number of frames for one DSum cycle out of battle (counting down).
-    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 382.0;
+    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 374.0;
     /**
      * Empirical envelope for Red/Blue overworld DSum cycle length (frames). The model advances the needle using
      * {@link #OVERWORLD_DSUM_CYCLE_FRAMES}; wedge width on calibrated overworld adds spread from the min/max rates.
