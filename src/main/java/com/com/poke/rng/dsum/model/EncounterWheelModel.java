@@ -11,9 +11,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 
+// TODO - Calibration seems to be off by some amount...
+// - Could be the time spent in battle?
+// - Could be the countdown / turnaround afterwards?
+
 /**
- * Central DSum / wheel state. Mutable instance fields are {@code volatile} so UI paint (and any thread that reads the
- * model) always sees writes from {@link #update(long)} without stale cached values.
+ * DSum wheel state: overworld vs in-battle stepping, calibration (entry rewind, slot pick, post-clear window), and
+ * uncertainty wedges for targets and suggestions. Fields are {@code volatile} so UI paint sees {@link #update(long)}
+ * writes without stale caches.
  */
 public class EncounterWheelModel {
 
@@ -31,12 +36,12 @@ public class EncounterWheelModel {
         JOIN_PARTY
     }
 
-    // GameBoy's native frame rate.
+    /** Nominal Game Boy frame rate (Hz); drives {@link #ONE_FRAME_NS}. */
     private static final double FRAME_RATE = 59.7275;
 
     // Red/Blue:
     // Average number of frames for one DSum cycle out of battle (counting down).
-    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 375.221374;
+    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 382.0;
     /**
      * Empirical envelope for Red/Blue overworld DSum cycle length (frames). The model advances the needle using
      * {@link #OVERWORLD_DSUM_CYCLE_FRAMES}; wedge width on calibrated overworld adds spread from the min/max rates.
@@ -44,58 +49,50 @@ public class EncounterWheelModel {
     private static final double RB_OVERWORLD_CYCLE_LENGTH_MIN_FRAMES = 367.0;
     private static final double RB_OVERWORLD_CYCLE_LENGTH_MAX_FRAMES = 415.0;
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.1083333;
+    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.0;
 
-    // Number of frames which the in-battle DSum cycle runs before the spiral battle entry animation ends.
-    private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 100;
-    // Number of frames which the in-battle DSum cycle runs before the full spiral battle entry animation ends.
-    private static final long COUNT_UP_BEFORE_FULL_SPIRAL_END_FRAMES = 117;
-    // Number of frames which the in-battle DSum cycle runs before the spiral battle entry animation ends.
+    /** Total frames from encounter to battle visible: spiral wipe (includes {@link #ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES} overworld continuation + in-battle segment). */
+    private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 103L;
+    /** Same role for full-length spiral wipe (alt animation). */
+    private static final long COUNT_UP_BEFORE_FULL_SPIRAL_END_FRAMES = 133L;
+    /** Yellow: total entry frames for normal spiral. */
     private static final long COUNT_UP_BEFORE_YELLOW_SPIRAL_END_FRAMES = 135;
-    // Number of frames which the in-battle DSum cycle runs before the full spiral battle entry animation ends.
+    /** Yellow: total entry frames for full spiral. */
     private static final long COUNT_UP_BEFORE_YELLOW_FULL_SPIRAL_END_FRAMES = 152;
 
-    // Number of frames which the in-battle DSum cycle runs before the blinds battle entry animation ends.
-    private static final long COUNT_UP_BEFORE_BLINDS_END_FRAMES = 48;
-    // Number of frames which the in-battle DSum cycle runs before the blinds battle entry animation ends.
-    private static final long COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES = 43;
-    // Number of frames which the in-battle DSum cycle runs after clearing 'Got away safely!'.
-    private static final long COUNT_UP_AFTER_GOT_AWAY_FRAMES = 37;
-    // Number of frames which the in-battle DSum cycle runs after clearing 'Ran away!'.
-    private static final long COUNT_UP_AFTER_RUN_FRAMES = 73;
-    private static final long COUNT_UP_AFTER_SENT_TO_BOX_FRAMES = 23;
-    private static final long COUNT_UP_AFTER_JOIN_PARTY_FRAMES = 37;
-    private static final long COUNT_UP_AFTER_NICKNAME_FRAMES = 29;
+    /**
+     * Blinds only: in-battle DSum steps after {@link #ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES}; total blinds entry =
+     * {@code 28 +} this (normal) or {@code 28 +} {@link #COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES} (vertical).
+     */
+    private static final long COUNT_UP_BEFORE_BLINDS_END_FRAMES = 63L;
+    /** Blinds alt (vertical wipe): in-battle segment length after the same overworld continuation. */
+    private static final long COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES = 56L;
+
+    private static final long COUNT_UP_AFTER_GOT_AWAY_FRAMES = 37L;
+    private static final long COUNT_UP_AFTER_RUN_FRAMES = 73L;
+    private static final long COUNT_UP_AFTER_SENT_TO_BOX_FRAMES = 23L;
+    private static final long COUNT_UP_AFTER_JOIN_PARTY_FRAMES = 37L;
+    private static final long COUNT_UP_AFTER_NICKNAME_FRAMES = 29L;
 
     /**
-     * After an encounter triggers, DSum keeps advancing at overworld rate for about this many frames before
-     * in-battle stepping fully applies (down in Red/Blue, up in Yellow — same signed period as {@link #update(long)}).
-     * Used in {@link #computeBattleEntryGeometry} for blinds entry only; spiral entry uses
-     * {@link #ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES}.
+     * Blinds entry: overworld-style frames after encounter before in-battle stepping dominates (same sign as
+     * {@link #update(long)} overworld branch). Spiral routes use {@link #ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES}.
      */
-    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES = 28;
+    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES = 8;
 
-    /**
-     * Same role as {@link #ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES} when the route uses spiral battle entry (not blinds).
-     */
-    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES = 7;
+    /** Spiral / wipe (non-blinds): overworld continuation frame count (split with total {@code A} in entry geometry). */
+    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES = 8;
 
-    // Yellow:
-    // Yellow's DSum is...  Interesting.
-    // It can range anywhere from ~670 - 850 frames.  But once the count has been determined on a route, it
-    // won't change.  To account for this, we have a base rate of ~800, and give the ability to increase or lower the
-    // cycle duration.  Sorry
+    /** Yellow overworld nominal cycle length (frames); sign matches internal convention; use {@link #modifyYellowOverworldDsumCycleModifier(double)} to tune. */
     private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE = -800.8647059;
 
     private volatile double overworldDsumCycleModifier = 0.0;
     private volatile double overworldDsumCycleModifierNs = 0.0;
 
-    // Average number of frames for one DSum cycle in battle (counting up).
+    /** Yellow: average in-battle DSum cycle length (frames). */
     private static final double YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES = 788.6914894;
 
-    // No count frames in yellow, since times are similar and go the same direction...
-
-    // The duration (in ns) of a single frame.
+    /** Game Boy frame length (ns) at {@link #FRAME_RATE}. */
     private static final double ONE_FRAME_NS = 1_000_000_000.0 / FRAME_RATE;
 
     private static final double OVERWORLD_CYCLE_NS = ONE_FRAME_NS * OVERWORLD_DSUM_CYCLE_FRAMES;
@@ -107,12 +104,6 @@ public class EncounterWheelModel {
 
     public static final int DSUM_RANGE = 256;
     public static final double OFFSET_STEP_DEG = 3.0;
-
-    /**
-     * Magnitude (°) added to the angle offset for suggested-slot band on calibrated overworld — positive for R/B
-     * (wheel sense), negated for Yellow where DSum cycles the other way.
-     */
-    private static final double SUGGESTED_SLOTS_ANGLE_OFFSET_DEG = 0.0;
 
     /**
      * Wedge widens by this many degrees on each side for each full in-battle wheel rotation (360° at in-battle rate);
@@ -144,8 +135,8 @@ public class EncounterWheelModel {
     private volatile int leadLevel = 70;
 
     /**
-     * Count-up frames assumed at {@link #battleStart(boolean)} ({@code #COUNT_UP_BEFORE_*}) — used to retro-correct
-     * calibration when actual animation length differed (see wild vs. lead level).
+     * Last {@link #countUpFramesBeforeBattleVisible(boolean)} from {@link #battleStart(boolean)} — for animation-length
+     * mismatch when route wild level implies a different alt wipe than assumed.
      */
     private volatile long assumedBattleAnimationFrames = COUNT_UP_BEFORE_SPIRAL_END_FRAMES;
 
@@ -192,9 +183,8 @@ public class EncounterWheelModel {
     /** Extra wedge width (total °) from in-battle rotations; see {@link #uncertaintyWedgeExtraDegForInBattleAngle}. */
     private volatile double uncertaintyBattleGrowthDeg;
     /**
-     * When true (second+ calibration with suggestions and non-empty inner suggested ∩ slot overlap), calibrated core
-     * wedge span uses {@link #calibratedInnerOverlapSpanDeg} instead of the full {@link #calibratedSlot} span, still
-     * symmetric about the needle.
+     * When true, calibrated inner wedge span uses {@link #calibratedInnerOverlapSpanDeg} from inner suggested ∩ slot
+     * overlap ({@link #calibrateSlot}) instead of the full {@link #calibratedSlot} range.
      */
     private volatile boolean calibratedInnerWedgeFromSuggestionOverlap;
     /**
@@ -320,57 +310,78 @@ public class EncounterWheelModel {
     private record BattleEntryGeometry(double angleAfterEntryCorrections, double encounterOffsetDeg) {}
 
     /**
-     * Inner suggested arc ∩ slot: total hit cells and inclusive bounds of the longest contiguous run (angle anchor).
+     * Inner suggested wedge (min…max DSum) ∩ this slot’s index range — only cells that are both suggested and in the
+     * pressed slot. Anchor uses the geometric centre of {@code [anchorMin, anchorMax]} (same as the wheel’s virtual arc
+     * centre): e.g. suggestion is half of slot 8 → calibrate to the middle of that half, not the middle of slot 8.
      */
-    private record InnerSuggestedSlotOverlap(int totalCellCount, int anchorMin, int anchorMax) {
+    private record InnerSuggestedSlotOverlap(int anchorMin, int anchorMax) {
         private double spanDeg() {
-            return (totalCellCount / (double) DSUM_RANGE) * 360.0;
+            return ((anchorMax - anchorMin + 1) / (double) DSUM_RANGE) * 360.0;
         }
     }
 
     /**
-     * In-battle window + overworld continuation (same as {@link #computeBattleEntryGeometry}). Maps encounter DSum to
-     * {@link #angleDeg} via {@code dsumFromAngle(angleDeg ± offset)} — see {@link #dsumTripletForEncounterAtAngle}.
+     * Degrees to map post-entry needle to encounter DSum: hardware runs {@code C} overworld then {@code A−C} in-battle
+     * steps ({@code θ_end − θ_enc = −C·ω_ow + (A−C)·ω_ib}). Not used for sim→hardware correction
+     * ({@link #computeBattleEntryGeometry}).
      */
     private double encounterOffsetDegForBattleEntry(final long animationFrames) {
         final Game game = this.game;
         final double overworldNs = overworldCycleNs();
         final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
-        final double angleDelta = (animationFrames * ONE_FRAME_NS) / inBattleNs * 360.0;
-        final long overworldContinuationFrames =
+        final long c =
                 isBlinds ? ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES : ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES;
-        final double overworldLagDeg = (overworldContinuationFrames * ONE_FRAME_NS / overworldNs) * 360.0;
-        return game == Game.YELLOW ? angleDelta + overworldLagDeg : angleDelta - overworldLagDeg;
+        final long inBattleOnly = animationFrames - c;
+        final double owDegPerFrame = (ONE_FRAME_NS / overworldNs) * 360.0;
+        final double ibDegPerFrame = (ONE_FRAME_NS / inBattleNs) * 360.0;
+        // θ_end − θ_enc = −C·ω_ow + (A−C)·ω_ib
+        final double endMinusEncounter = -c * owDegPerFrame + inBattleOnly * ibDegPerFrame;
+        // R/B: usedDeg = angleAfter + offset = θ_enc ⇒ offset = θ_enc − θ_end = −(θ_end − θ_enc).
+        // Yellow: usedDeg = angleAfter − offset = θ_enc ⇒ offset = θ_end − θ_enc.
+        return game == Game.YELLOW ? endMinusEncounter : -endMinusEncounter;
     }
 
-    /** Same geometry as {@link #battleStart(boolean)}: entry jumps + encounter rewind offset (does not mutate state). */
+    /**
+     * Non-mutating {@link #battleStart(boolean)} geometry: sim angle at Space assumed overworld-only for {@code A}
+     * frames; correction {@code (A−C)(ω_ow+ω_ib)} to match hardware end angle. Encounter rewind uses
+     * {@link #encounterOffsetDegForBattleEntry}.
+     */
     private BattleEntryGeometry computeBattleEntryGeometry(final boolean altAnimation, final double overworldAngleDeg) {
         final Game game = this.game;
         final long animationFrames = countUpFramesBeforeBattleVisible(altAnimation);
         final double overworldNs = overworldCycleNs();
         final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
-        final double incorrectDownAngle = ((animationFrames * ONE_FRAME_NS) / overworldNs) * 360.0;
-        final double correctUpAngle = ((animationFrames * ONE_FRAME_NS) / inBattleNs) * 360.0;
+        final long overworldContinuationFrames =
+                isBlinds ? ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES : ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES;
+        final long inBattleOnlyFrames = animationFrames - overworldContinuationFrames;
+        final double owDegPerFrame = (ONE_FRAME_NS / overworldNs) * 360.0;
+        final double ibDegPerFrame = (ONE_FRAME_NS / inBattleNs) * 360.0;
+        // θ_end − θ_kp: sim advanced overworld for all A frames; hardware did C overworld + (A−C) in-battle.
+        final double angleCorrectionDeg = inBattleOnlyFrames * (owDegPerFrame + ibDegPerFrame);
         final double correction =
                 (game == Game.YELLOW && pikaLead)
                         ? (PIKACHU_CRY_FRAMES * ONE_FRAME_NS) / inBattleNs * 360.0
                         : 0.0;
-        final double angleAfter =
-                overworldAngleDeg + correctUpAngle + incorrectDownAngle + correction;
-        // Rewind by the same in-battle window as {@code battleEnterTime} (encounter → Space), not full spiral length.
+        final double angleAfter = overworldAngleDeg + angleCorrectionDeg + correction;
         final double encounterOffsetDeg = encounterOffsetDegForBattleEntry(animationFrames);
         return new BattleEntryGeometry(angleAfter, encounterOffsetDeg);
     }
 
+    /** Maps post-entry needle angle to encounter-time angle for {@link #dsumFromAngle} (R/B add, Yellow subtract offset). */
+    private double encounterMappedAngleDegForDsum(
+            final double angleAfterBattleEntryJumps, final double encounterOffsetDeg) {
+        return game == Game.YELLOW
+                ? angleAfterBattleEntryJumps - encounterOffsetDeg
+                : angleAfterBattleEntryJumps + encounterOffsetDeg;
+    }
+
+    /** Encounter-time (min, centre, max) DSum: centre at {@code usedDeg}; min/max from angular wedge ± np. */
     private Triplet<Integer, Integer, Integer> dsumTripletForEncounterAtAngle(
             final double angleAfterBattleEntryJumps,
             final double encounterOffsetDeg) {
         final double[] np = new double[2];
         fillUncertaintyWedgeNegPosDeg(np);
-        final double usedDeg =
-                game == Game.YELLOW
-                        ? angleAfterBattleEntryJumps - encounterOffsetDeg
-                        : angleAfterBattleEntryJumps + encounterOffsetDeg;
+        final double usedDeg = encounterMappedAngleDegForDsum(angleAfterBattleEntryJumps, encounterOffsetDeg);
         final int dsum = dsumFromAngle(usedDeg);
         final int min = dsumFromAngle(usedDeg - np[0]);
         final int max = dsumFromAngle(usedDeg + np[1]);
@@ -378,8 +389,13 @@ public class EncounterWheelModel {
         return new Triplet<>(min, dsum, max);
     }
 
-    private static double angleFromDsum(final int dsum) {
-        return (dsum / (double) DSUM_RANGE) * 360.0;
+    /**
+     * Geometric centre of inclusive DSum cells {@code [vMin, vMax]} on the cycle — matches wheel slot
+     * {@code startDeg + extentDeg/2} (see {@code EncounterWheel#drawSlots}).
+     */
+    private static double battleStartAngleForVirtualInclusiveDsumRange(final int vMin, final int vMax) {
+        final double centerFrac = (vMin + vMax + 1) / (2.0 * DSUM_RANGE);
+        return centerFrac * 360.0;
     }
 
     /**
@@ -482,9 +498,15 @@ public class EncounterWheelModel {
         return hitMaskToInclusiveCircularArcEndpoints(hit);
     }
 
+    /**
+     * Frames from encounter generation until end of entry (Space): blinds = continuation + in-battle segment; spirals =
+     * total length {@code A} (see {@link #computeBattleEntryGeometry} for split {@code C} vs {@code A−C}).
+     */
     private long countUpFramesBeforeBattleVisible(final boolean altAnimation) {
         if (isBlinds) {
-            return altAnimation ? COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES : COUNT_UP_BEFORE_BLINDS_END_FRAMES;
+            final long inBattleOnly =
+                    altAnimation ? COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES : COUNT_UP_BEFORE_BLINDS_END_FRAMES;
+            return ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES + inBattleOnly;
         }
         return game == Game.YELLOW ?
                 (altAnimation ? COUNT_UP_BEFORE_YELLOW_FULL_SPIRAL_END_FRAMES : COUNT_UP_BEFORE_YELLOW_SPIRAL_END_FRAMES) :
@@ -555,29 +577,28 @@ public class EncounterWheelModel {
         final long now = System.nanoTime();
         final long animationFrames = countUpFramesBeforeBattleVisible(altAnimation);
         assumedBattleAnimationFrames = animationFrames;
-        // Retro-correct angleDeg for the entry animation (+ Pikachu cry on Yellow): see computeBattleEntryGeometry.
-        // Set battleEnterTime only after rangeAtBattleStart so getUncertaintyWedgeExtentDeg() still sees overworld
-        // state (e.g. rangeAtBattleStart null, calibrated-slot wedge) while building the encounter triplet — not a
-        // half-initialized in-battle branch with a null range.
+        /* battleEnterTime after rangeAtBattleStart so {@link #fillUncertaintyWedgeNegPosDeg} still sees pre-battle state. */
         final BattleEntryGeometry geom = computeBattleEntryGeometry(altAnimation, angleDeg);
         angleDeg = geom.angleAfterEntryCorrections();
         rangeAtBattleStart = dsumTripletForEncounterAtAngle(angleDeg, geom.encounterOffsetDeg());
         battleEnterTime = now - (long) (animationFrames * ONE_FRAME_NS);
-        /*
-         * After battleEnterTime is set: {@link #fillInBattleOrZeroNegPosDeg} yields a non-zero in-battle wedge when
-         * uncalibrated, so suggested-slot overlap/segments match the hidden wedge for this encounter (fixed for the
-         * whole calibration window — see {@link #innerSuggestedRangeAtBattleStart}).
-         */
-        final double sugOff = suggestedSlotsEffectiveAngleOffsetDeg();
-        innerSuggestedRangeAtBattleStart = computeDsumRangeInnerOnlyAtAngle(angleDeg, sugOff);
-        fullSuggestedRangeAtBattleStart = computeDsumRangeFullAtAngle(angleDeg, sugOff);
+        final double encounterAngleForSuggestions =
+                encounterMappedAngleDegForDsum(angleDeg, geom.encounterOffsetDeg());
+        innerSuggestedRangeAtBattleStart = computeDsumRangeInnerOnlyAtAngle(encounterAngleForSuggestions);
+        fullSuggestedRangeAtBattleStart = computeDsumRangeFullAtAngle(encounterAngleForSuggestions);
 
         refreshTargetOverlapApproachProgress();
     }
 
+    /** True after {@link #calibrateSlot(int)} has completed at least once this session (or until {@link #clearCalibrationState(long)}). */
+    public boolean hasCalibratedAtLeastOnce() {
+        return hasCalibratedAtLeastOnce;
+    }
+
     /**
-     * Clears calibration and any in-progress battle transition, returning to overworld rotation
-     * (down in Red/Blue, up in Yellow). Does not change game, route blinds flag, targets, or Yellow modifiers.
+     * Fully uncalibrated state: clears calibrated slot, in-battle transition, wedge growth, and
+     * {@linkplain #setSuggestedSlots suggested slots}. Does not change {@link #getAngleDeg() needle angle}, game, route, blinds flag, lead level, Pikachu lead,
+     * Yellow modifier, outer-cycle band flag, or target slots.
      */
     public void clearCalibrationState(final long now) {
         calibratedSlot = null;
@@ -591,9 +612,11 @@ public class EncounterWheelModel {
         rangeAtBattleStart = null;
         innerSuggestedRangeAtBattleStart = null;
         fullSuggestedRangeAtBattleStart = null;
+        suggestedSlots = null;
         manualAngleOffsetDeltaDeg = 0;
         warningBeepPending = false;
         lastNow = now;
+        overworldStartTime = now;
         postClearTiming = CalibratePostClearTiming.NORMAL;
         refreshTargetOverlapApproachProgress();
     }
@@ -638,6 +661,13 @@ public class EncounterWheelModel {
         return postClearTiming;
     }
 
+    /**
+     * Ends calibration: anchor to the wheel angle at the centre of the pressed slot (or wedge ∩ slot). That angle is
+     * the DSum state at <em>battle visible</em> (end of entry). Since then: first {@link #ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES}
+     * or {@link #ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES} of wall time at overworld rate (same sign as
+     * {@link #update(long)} overworld), then the remainder at in-battle rate; then fast-forward {@code n} frames at
+     * in-battle only for the post-clear ({@code COUNT_UP_AFTER_*}) window before overworld stepping resumes.
+     */
     public void calibrateSlot(final int givenSlot) {
 
         if (battleEnterTime == -1) {
@@ -663,7 +693,11 @@ public class EncounterWheelModel {
                 };
         postClearTiming = CalibratePostClearTiming.NORMAL;
 
-        final int midDsum = (slot.min() + slot.max()) / 2;
+        final Triplet<Integer, Integer, Integer> innerSuggestedSnapshot = innerSuggestedRangeAtBattleStart;
+        final Optional<InnerSuggestedSlotOverlap> slotOverlapOpt =
+                innerSuggestedSnapshot != null
+                        ? computeInnerSuggestedSlotOverlap(slot, innerSuggestedSnapshot)
+                        : Optional.empty();
         final Triplet<Integer, Integer, Integer> innerSuggestedSnapshot = innerSuggestedRangeAtBattleStart;
         final boolean refineFromSuggestions =
                 hasCalibratedAtLeastOnce && suggestedSlots != null && innerSuggestedSnapshot != null;
@@ -680,36 +714,31 @@ public class EncounterWheelModel {
             }
         }
         final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
-        double overworldNs = game == Game.YELLOW ? (YELLOW_OVERWORLD_CYCLE_NS + overworldDsumCycleModifierNs) : OVERWORLD_CYCLE_NS;
-        double angleChangeInBattle = (timeInBattle / inBattleNs) * 360.0;
-        // We're going to start reversing immediately, but the game keeps counting up for a few frames after we clear
-        // the 'Got away safely!' message.  We account for that here with whatever this formula is...
-        // We /would/ have kept counting up for postClearCountUpFrames, at the in battle rate.  But for that
-        // number of frames instead, we would be counting down.
-        // This results in the wheel being wrong for those frames...  But you can't get an
-        // encounter in that window anyways - and makes the maths much simpler.
-        final double correctUpAngle = ((postClearCountUpFrames * ONE_FRAME_NS) / inBattleNs) * 360.0;
-        final double incorrectDownAngle = (((postClearCountUpFrames - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
+        final double overworldNs =
+                game == Game.YELLOW ? (YELLOW_OVERWORLD_CYCLE_NS + overworldDsumCycleModifierNs) : OVERWORLD_CYCLE_NS;
 
-        angleChangeInBattle += (correctUpAngle + incorrectDownAngle);
+        final long continuationFrames =
+                isBlinds ? ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES : ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES;
+        final long continuationNs = (long) (continuationFrames * ONE_FRAME_NS);
+        final long elapsedSinceBattleVisibleNs = timeInBattle;
+        final long overworldPhaseNs = Math.min(elapsedSinceBattleVisibleNs, continuationNs);
+        final long inBattlePhaseNs = Math.max(0L, elapsedSinceBattleVisibleNs - continuationNs);
 
-        /*
-         * Battle-start angleDeg must align with {@link #dsumTripletForEncounterAtAngle}: R/B uses
-         * dsumFromAngle(angleDeg + encounterOffsetDeg), Yellow uses dsumFromAngle(angleDeg - encounterOffsetDeg) for the
-         * encounter cell. Anchor angle is the cycle position for the slot / overlap centre as if offset were 0; undo it.
-         */
-        final double encounterOffsetDeg = encounterOffsetDegForBattleEntry(assumedBattleAnimationFrames);
+        final double overworldPhaseDeg = -((overworldPhaseNs / overworldNs) * 360.0);
+        final double inBattlePhaseDeg = ((inBattlePhaseNs / inBattleNs) * 360.0);
+        // During the post clear portion, the DSum advances only at roughly half the usual in-battle rate.
+        final double postClearInBattleDeg = ((postClearCountUpFrames * ONE_FRAME_NS) / (inBattleNs * 2)) * 360.0;
+        final double postClearOverworldDeg = ((postClearCountUpFrames * ONE_FRAME_NS) / overworldNs) * 360.0;
+
+        final double rotationSinceBattleVisible = overworldPhaseDeg + inBattlePhaseDeg + postClearInBattleDeg + postClearOverworldDeg;
+        final double totalInBattleDegForWedgeGrowth = inBattlePhaseDeg + postClearInBattleDeg;
+
         final double anchorAngle =
-                slotOverlapOpt.map(
-                                o -> battleStartAngleForVirtualInclusiveDsumRange(o.anchorMin(), o.anchorMax()))
-                        .orElseGet(() -> angleFromDsum(midDsum));
-        final double angleAtBattleStart =
-                game == Game.YELLOW
-                        ? norm360(anchorAngle + encounterOffsetDeg)
-                        : norm360(anchorAngle - encounterOffsetDeg);
-        final double newAngle = angleAtBattleStart + angleChangeInBattle;
-
-        // Match {@link #update()} overworld: angleDeg += -((delta / overworldNs) * 360).
+                slotOverlapOpt
+                        .map(o -> battleStartAngleForVirtualInclusiveDsumRange(o.anchorMin(), o.anchorMax()))
+                        .orElseGet(() -> battleStartAngleForVirtualInclusiveDsumRange(slot.min(), slot.max()));
+        final double newAngle = norm360(anchorAngle + rotationSinceBattleVisible);
+        // Align with {@link #update()} overworld step for elapsed wall time since lastNow.
         angleDeg = newAngle - ((now - lastNow) / overworldNs) * 360.0;
         battleEnterTime = -1;
         innerSuggestedRangeAtBattleStart = null;
@@ -717,7 +746,7 @@ public class EncounterWheelModel {
         calibratedSlot = slot;
         hasCalibratedAtLeastOnce = true;
         rbOverworldElapsedForCycleUncertaintyNs = 0;
-        uncertaintyBattleGrowthDeg = uncertaintyWedgeExtraDegForInBattleAngle(angleChangeInBattle);
+        uncertaintyBattleGrowthDeg = uncertaintyWedgeExtraDegForInBattleAngle(totalInBattleDegForWedgeGrowth);
         uncertaintyWedgeExtentDeltaDeg = 0;
         manualAngleOffsetDeltaDeg = 0;
         overworldStartTime = now + (long) (postClearCountUpFrames * ONE_FRAME_NS);
@@ -1055,6 +1084,7 @@ public class EncounterWheelModel {
         fillInBattleOrZeroNegPosDeg(out);
     }
 
+    /** Uncalibrated in-battle: symmetric wedge from encounter slot span + rotation growth (see {@link #rangeAtBattleStart}). */
     private void fillInBattleOrZeroNegPosDeg(final double[] out) {
         if (battleEnterTime == -1 || rangeAtBattleStart == null) {
             out[0] = 0.0;
@@ -1167,29 +1197,24 @@ public class EncounterWheelModel {
     }
 
     public Triplet<Integer, Integer, Integer> getDsumRange() {
-        return getDsumRange(0);
-    }
-
-    public Triplet<Integer, Integer, Integer> getDsumRange(final double angleOffset) {
-        return computeDsumRangeFullAtAngle(angleDeg, angleOffset);
+        return computeDsumRangeFullAtAngle(angleDeg);
     }
 
     /**
-     * Like {@link #getDsumRange(double)} but uses the inner uncertainty wedge only (no R/B outer cycle band).
+     * Like {@link #getDsumRange()} but uses the inner uncertainty wedge only (no R/B outer cycle band).
      */
-    public Triplet<Integer, Integer, Integer> getDsumRangeInnerOnly(final double angleOffset) {
-        return computeDsumRangeInnerOnlyAtAngle(angleDeg, angleOffset);
+    public Triplet<Integer, Integer, Integer> getDsumRangeInnerOnly() {
+        return computeDsumRangeInnerOnlyAtAngle(angleDeg);
     }
 
-    /** Same linear-span construction as {@link #getDsumRange(double)} at an explicit live wheel angle. */
+    /**
+     * Linear-span DSum triple at {@code liveAngleDeg + offset}: centre at {@code usedDeg}; band width from
+     * {@link #fillUncertaintyWedgeNegPosDeg} (matches {@link com.com.poke.rng.dsum.model.view.EncounterWheelBar} strip).
+     */
     private Triplet<Integer, Integer, Integer> computeDsumRangeFullAtAngle(
-            final double liveAngleDeg, final double angleOffset) {
-        final double usedDeg = liveAngleDeg + angleOffset;
+            final double liveAngleDeg) {
+        final double usedDeg = liveAngleDeg;
         final int dsum = dsumFromAngle(usedDeg);
-        /*
-         * Match EncounterWheelBar#drawUncertaintyBand: centre is linear cycle fraction × 256; span uses asymmetric
-         * neg/pos ° → DSum units per side. Endpoints can disagree with two-angle sampling when the strip wraps.
-         */
         final double[] np = new double[2];
         fillUncertaintyWedgeNegPosDeg(np);
         final double wdNeg = (np[0] / 360.0) * DSUM_RANGE;
@@ -1199,10 +1224,10 @@ public class EncounterWheelModel {
         return new Triplet<>(ends[0], dsum, ends[1]);
     }
 
-    /** Same as {@link #getDsumRangeInnerOnly(double)} at an explicit live wheel angle. */
+    /** Like {@link #computeDsumRangeFullAtAngle} but {@link #fillInnerUncertaintyWedgeNegPosDeg} (no R/B outer cycle band). */
     private Triplet<Integer, Integer, Integer> computeDsumRangeInnerOnlyAtAngle(
-            final double liveAngleDeg, final double angleOffset) {
-        final double usedDeg = liveAngleDeg + angleOffset;
+            final double liveAngleDeg) {
+        final double usedDeg = liveAngleDeg;
         final int dsum = dsumFromAngle(usedDeg);
         final double[] np = new double[2];
         fillInnerUncertaintyWedgeNegPosDeg(np);
@@ -1214,44 +1239,18 @@ public class EncounterWheelModel {
     }
 
     /**
-     * DSum triple for suggested-slot UI only. Overworld (calibrated): {@link #getDsumRange(double)} with
-     * {@link #suggestedSlotsEffectiveAngleOffsetDeg()} (no step-lag offset). Calibrating:
-     * {@link #getDsumRangeAtStartOfBattle()}.
+     * DSum triple driving suggested-slot min / likeliest / max: live {@link #getDsumRange()} on overworld when
+     * calibrated; while calibrating, {@link #getDsumRangeAtStartOfBattle()} (encounter-time range).
      */
     public Triplet<Integer, Integer, Integer> getDsumRangeForSuggestedSlots() {
         if (isCalibrating()) {
             return getDsumRangeAtStartOfBattle();
         }
-        return getDsumRange(suggestedSlotsEffectiveAngleOffsetDeg());
+        return getDsumRange();
     }
 
     public Triplet<Integer, Integer, Integer> getDsumRangeAtStartOfBattle() {
         return rangeAtBattleStart;
-    }
-
-    private double suggestedSlotsEffectiveAngleOffsetDeg() {
-        final double sign = game == Game.YELLOW ? -1.0 : 1.0;
-        return sign * SUGGESTED_SLOTS_ANGLE_OFFSET_DEG;
-    }
-
-    /**
-     * For suggested-slot tinting: fraction {@code 0…1} of the <em>full</em> suggested wedge (inner + optional outer)
-     * that lies in {@code slot}. Prefer {@link #encounterInnerWedgeOverlapPortionOfSlot} and
-     * {@link #encounterOuterOnlyWedgeOverlapPortionOfSlot} for layered colouring.
-     */
-    public OptionalDouble encounterWedgeOverlapPortionOfSlot(final EncounterSlot slot) {
-        final Triplet<Integer, Integer, Integer> wedgeTriplet;
-        if (isCalibrating()) {
-            if (fullSuggestedRangeAtBattleStart == null) {
-                return OptionalDouble.empty();
-            }
-            wedgeTriplet = fullSuggestedRangeAtBattleStart;
-        } else if (getCalibratedSlot() != null) {
-            wedgeTriplet = getDsumRange(suggestedSlotsEffectiveAngleOffsetDeg());
-        } else {
-            return OptionalDouble.empty();
-        }
-        return dsumArcOverlapPortionOfSlot(wedgeTriplet.first(), wedgeTriplet.third(), slot);
     }
 
     /**
@@ -1266,7 +1265,7 @@ public class EncounterWheelModel {
             }
             wedgeTriplet = innerSuggestedRangeAtBattleStart;
         } else if (getCalibratedSlot() != null) {
-            wedgeTriplet = getDsumRangeInnerOnly(suggestedSlotsEffectiveAngleOffsetDeg());
+            wedgeTriplet = getDsumRangeInnerOnly();
         } else {
             return OptionalDouble.empty();
         }
@@ -1284,9 +1283,8 @@ public class EncounterWheelModel {
         if (!isDrawingOuterRbCycleUncertaintyBand()) {
             return OptionalDouble.empty();
         }
-        final double offset = suggestedSlotsEffectiveAngleOffsetDeg();
-        final Triplet<Integer, Integer, Integer> innerT = getDsumRangeInnerOnly(offset);
-        final Triplet<Integer, Integer, Integer> fullT = getDsumRange(offset);
+        final Triplet<Integer, Integer, Integer> innerT = getDsumRangeInnerOnly();
+        final Triplet<Integer, Integer, Integer> fullT = getDsumRange();
         return dsumOuterOnlyOverlapPortionOfSlot(
                 innerT.first(), innerT.third(), fullT.first(), fullT.third(), slot);
     }
@@ -1331,7 +1329,7 @@ public class EncounterWheelModel {
             }
             wedgeTriplet = innerSuggestedRangeAtBattleStart;
         } else if (getCalibratedSlot() != null) {
-            wedgeTriplet = getDsumRangeInnerOnly(suggestedSlotsEffectiveAngleOffsetDeg());
+            wedgeTriplet = getDsumRangeInnerOnly();
         } else {
             return List.of();
         }
@@ -1347,9 +1345,8 @@ public class EncounterWheelModel {
         if (isCalibrating() || getCalibratedSlot() == null || !isDrawingOuterRbCycleUncertaintyBand()) {
             return List.of();
         }
-        final double offset = suggestedSlotsEffectiveAngleOffsetDeg();
-        final Triplet<Integer, Integer, Integer> innerT = getDsumRangeInnerOnly(offset);
-        final Triplet<Integer, Integer, Integer> fullT = getDsumRange(offset);
+        final Triplet<Integer, Integer, Integer> innerT = getDsumRangeInnerOnly();
+        final Triplet<Integer, Integer, Integer> fullT = getDsumRange();
         final int iLo = innerT.first() & (DSUM_RANGE - 1);
         final int iHi = innerT.third() & (DSUM_RANGE - 1);
         final int fLo = fullT.first() & (DSUM_RANGE - 1);
@@ -1428,13 +1425,21 @@ public class EncounterWheelModel {
             final EncounterSlot slot, final Triplet<Integer, Integer, Integer> innerSuggested) {
         final int arcLo = innerSuggested.first() & (DSUM_RANGE - 1);
         final int arcHi = innerSuggested.third() & (DSUM_RANGE - 1);
+        final int innerCentre = innerSuggested.second() & (DSUM_RANGE - 1);
         final List<int[]> segs = contiguousDsumHitsInLinearRange(slot.min(), slot.max(), arcLo, arcHi);
         if (segs.isEmpty()) {
             return Optional.empty();
         }
-        int totalCnt = 0;
+        if (segs.size() == 1) {
+            final int[] only = segs.get(0);
+            return Optional.of(new InnerSuggestedSlotOverlap(only[0], only[1]));
+        }
+        // Rare: wrapping wedge can meet the same slot in two runs; prefer the run that contains the suggestion centre
+        // when that centre lies in this slot (otherwise centre is usually in another slot, e.g. all of slot 9).
         for (final int[] seg : segs) {
-            totalCnt += seg[1] - seg[0] + 1;
+            if (innerCentre >= seg[0] && innerCentre <= seg[1]) {
+                return Optional.of(new InnerSuggestedSlotOverlap(seg[0], seg[1]));
+            }
         }
         int[] best = segs.get(0);
         int bestLen = best[1] - best[0] + 1;
@@ -1446,7 +1451,7 @@ public class EncounterWheelModel {
                 best = seg;
             }
         }
-        return Optional.of(new InnerSuggestedSlotOverlap(totalCnt, best[0], best[1]));
+        return Optional.of(new InnerSuggestedSlotOverlap(best[0], best[1]));
     }
 
     private static int countDsumValuesInInclusiveCircularArc(final int arcLo, final int arcHi) {
@@ -1488,10 +1493,12 @@ public class EncounterWheelModel {
         refreshTargetOverlapApproachProgress();
     }
 
+    /** {@code null} means no suggested walk is shown (e.g. before first calibration). */
     public void setSuggestedSlots(final Triplet<EncounterSlot, EncounterSlot, EncounterSlot> suggested) {
         this.suggestedSlots = suggested;
     }
 
+    /** May be {@code null}; see {@link #setSuggestedSlots}. */
     public Triplet<EncounterSlot, EncounterSlot, EncounterSlot> getSuggestedSlots() {
         return suggestedSlots;
     }

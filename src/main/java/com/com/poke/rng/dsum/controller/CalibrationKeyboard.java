@@ -13,14 +13,18 @@ public final class CalibrationKeyboard {
     private final EncounterWheelModel model;
     private final Runnable notePostConfiguration;
     private final Runnable requestRepaint;
+    /** After {@link EncounterWheelModel#clearCalibrationState(long)}: sync UI that caches suggested slots (controller). */
+    private final Runnable onCalibrationCleared;
 
     public CalibrationKeyboard(
             final EncounterWheelModel model,
             final Runnable notePostConfiguration,
-            final Runnable requestRepaint) {
+            final Runnable requestRepaint,
+            final Runnable onCalibrationCleared) {
         this.model = model;
         this.notePostConfiguration = notePostConfiguration;
         this.requestRepaint = requestRepaint;
+        this.onCalibrationCleared = onCalibrationCleared;
     }
 
     public static boolean isCalibrationKey(final int keyCode) {
@@ -127,7 +131,12 @@ public final class CalibrationKeyboard {
             case KeyEvent.VK_EQUALS -> model.uncertaintyDelta(true);
             case KeyEvent.VK_OPEN_BRACKET -> model.manualAngle(false);
             case KeyEvent.VK_CLOSE_BRACKET -> model.manualAngle(true);
-            case KeyEvent.VK_DELETE -> model.clearCalibrationState(System.nanoTime());
+            case KeyEvent.VK_DELETE -> {
+                model.clearCalibrationState(System.nanoTime());
+                onCalibrationCleared.run();
+                notePostConfiguration.run();
+                requestRepaint.run();
+            }
             default -> {}
         }
     }

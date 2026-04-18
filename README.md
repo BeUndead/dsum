@@ -27,7 +27,7 @@ These show the basic use of the application.
 
 - **[-] / [=]** — Nudge the **uncertainty wedge** narrower or wider (manual correction if the wedge feels too pessimistic or too tight).
 - **[\[] / [\]]** — Small **manual angle** nudge on the wheel (degrees per step), if you need to align the readout with a known state.
-- **[Delete]** — **Clear calibration**: forget the calibrated slot, cancel an in-progress battle transition, and go back to pure overworld rotation. Does not change game, route, targets, or Yellow modifier.
+- **[Delete]** — **Clear calibration**: forget the calibrated slot, cancel an in-progress battle transition, clear suggested-slot highlights (until you calibrate again), and go back to pure overworld rotation. Does not change the current needle angle, game, route, lead level, Pikachu-lead flag, target slots, Yellow modifier, or outer-cycle band setting.
 
 ## Calibration in more detail
 

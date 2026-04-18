@@ -295,6 +295,14 @@ public class SlotsDisplayPanel extends JPanel {
             applyIdleAmberBar(suggestionAmberBars.get(j));
         }
 
+        if (slots == null) {
+            SwingUtilities.invokeLater(() -> {
+                revalidate();
+                repaint();
+            });
+            return;
+        }
+
         final int firstIndex = slots.first().ordinal();
         final int likeliestIndex = slots.second().ordinal();
         final int lastIndex = slots.third().ordinal();

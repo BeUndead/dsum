@@ -16,6 +16,7 @@ import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public final class EncounterWheelController implements NativeKeyListener {
@@ -76,7 +77,16 @@ public final class EncounterWheelController implements NativeKeyListener {
         this.repaintTargets = repaintTargets.clone();
         this.humPlayer = humPlayer;
         this.onSuggestedChange = onSuggestedChange;
-        this.calibrationKeys = new CalibrationKeyboard(model, this::notePostConfiguration, this::requestRepaintTargets);
+        this.calibrationKeys =
+                new CalibrationKeyboard(model, this::notePostConfiguration, this::requestRepaintTargets, this::syncUiAfterCalibrationClear);
+    }
+
+    /** Clears controller-side suggested-slot cache so the slot strip matches {@link EncounterWheelModel#clearCalibrationState(long)} immediately. */
+    private void syncUiAfterCalibrationClear() {
+        if (suggestedSlots != null) {
+            onSuggestedChange.accept(null);
+            suggestedSlots = null;
+        }
     }
 
     /**
@@ -390,6 +400,14 @@ public final class EncounterWheelController implements NativeKeyListener {
     }
 
     private void checkForSlotSwap() {
+        if (!model.hasCalibratedAtLeastOnce()) {
+            model.setSuggestedSlots(null);
+            if (suggestedSlots != null) {
+                onSuggestedChange.accept(null);
+                suggestedSlots = null;
+            }
+            return;
+        }
 
         final Triplet<Integer, Integer, Integer> dsumRange = model.getDsumRangeForSuggestedSlots();
 
@@ -399,7 +417,7 @@ public final class EncounterWheelController implements NativeKeyListener {
 
         final Triplet<EncounterSlot, EncounterSlot, EncounterSlot> newSuggested = new Triplet<>(min, likeliest, max);
         model.setSuggestedSlots(newSuggested);
-        if (suggestedSlots != null && !suggestedSlots.equals(newSuggested)) {
+        if (!Objects.equals(suggestedSlots, newSuggested)) {
             onSuggestedChange.accept(newSuggested);
         }
         suggestedSlots = newSuggested;
