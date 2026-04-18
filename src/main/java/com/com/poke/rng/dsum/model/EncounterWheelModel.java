@@ -68,6 +68,7 @@ public class EncounterWheelModel {
     /** Blinds alt (vertical wipe): in-battle segment length after the same overworld continuation. */
     private static final long COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES = 56L;
 
+    private static final long PAUSE_AFTER_EXIT_FRAMES = 4L;
     private static final long COUNT_UP_AFTER_GOT_AWAY_FRAMES = 37L;
     private static final long COUNT_UP_AFTER_RUN_FRAMES = 73L;
     private static final long COUNT_UP_AFTER_SENT_TO_BOX_FRAMES = 23L;
@@ -712,9 +713,12 @@ public class EncounterWheelModel {
 
         final double overworldPhaseDeg = -((overworldPhaseNs / overworldNs) * 360.0);
         final double inBattlePhaseDeg = ((inBattlePhaseNs / inBattleNs) * 360.0);
-        // During the post clear portion, the DSum advances only at roughly half the usual in-battle rate.
-        final double postClearInBattleDeg = ((postClearCountUpFrames * ONE_FRAME_NS) / (inBattleNs * 2)) * 360.0;
-        final double postClearOverworldDeg = ((postClearCountUpFrames * ONE_FRAME_NS) / overworldNs) * 360.0;
+        final double postClearInBattleDeg = (((postClearCountUpFrames - PAUSE_AFTER_EXIT_FRAMES) * ONE_FRAME_NS) / inBattleNs) * 360.0;
+        // There is also a pause in the DSum for PAUSE_AFTER_EXIT_FRAMES.  We account for this by over-rotating by the
+        // overworld rate for those extra frames NOW, so that after those frames, while rotating at the overworld rate
+        // we UNDO this extra rotation.  The actual DSum will be out for this time, but since you won't be getting an
+        // encounter while it fades back to the overworld, it doesn't matter.
+        final double postClearOverworldDeg = (((postClearCountUpFrames + PAUSE_AFTER_EXIT_FRAMES) * ONE_FRAME_NS) / overworldNs) * 360.0;
 
         final double rotationSinceBattleVisible = overworldPhaseDeg + inBattlePhaseDeg + postClearInBattleDeg + postClearOverworldDeg;
         final double totalInBattleDegForWedgeGrowth = inBattlePhaseDeg + postClearInBattleDeg;
