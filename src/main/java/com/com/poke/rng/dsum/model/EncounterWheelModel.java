@@ -398,15 +398,6 @@ public class EncounterWheelModel {
         return centerFrac * 360.0;
     }
 
-    /**
-     * Geometric centre of inclusive DSum cells {@code [vMin, vMax]} on the cycle — matches wheel slot
-     * {@code startDeg + extentDeg/2} (see {@code EncounterWheel#drawSlots}).
-     */
-    private static double battleStartAngleForVirtualInclusiveDsumRange(final int vMin, final int vMax) {
-        final double centerFrac = (vMin + vMax + 1) / (2.0 * DSUM_RANGE);
-        return centerFrac * 360.0;
-    }
-
     private static int dsumFromAngle(final double angleDegrees) {
         double a = angleDegrees % 360.0;
         if (a < 0.0) {
@@ -698,11 +689,6 @@ public class EncounterWheelModel {
                 innerSuggestedSnapshot != null
                         ? computeInnerSuggestedSlotOverlap(slot, innerSuggestedSnapshot)
                         : Optional.empty();
-        final Triplet<Integer, Integer, Integer> innerSuggestedSnapshot = innerSuggestedRangeAtBattleStart;
-        final boolean refineFromSuggestions =
-                hasCalibratedAtLeastOnce && suggestedSlots != null && innerSuggestedSnapshot != null;
-        final Optional<InnerSuggestedSlotOverlap> slotOverlapOpt =
-                refineFromSuggestions ? computeInnerSuggestedSlotOverlap(slot, innerSuggestedSnapshot) : Optional.empty();
         long timeInBattle = now - battleEnterTime;
 
         if (route != null) {
@@ -765,7 +751,8 @@ public class EncounterWheelModel {
     }
 
     public void uncertaintyDelta(final boolean positive) {
-        uncertaintyWedgeExtentDeltaDeg += positive ? OFFSET_STEP_DEG : -OFFSET_STEP_DEG;
+        uncertaintyWedgeExtentDeltaDeg += positive
+                ? UNCERTAINTY_WEDGE_DEGREES_DELTA_PER_ROTATION : -UNCERTAINTY_WEDGE_DEGREES_DELTA_PER_ROTATION;
         refreshTargetOverlapApproachProgress();
     }
 
