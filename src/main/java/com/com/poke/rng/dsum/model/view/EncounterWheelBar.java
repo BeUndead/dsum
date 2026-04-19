@@ -28,7 +28,6 @@ public final class EncounterWheelBar extends JPanel {
     public static final int DEFAULT_PREFERRED_HEIGHT = 118;
 
     private static final int OVERLAP_BAR_W = 196;
-
     /** Same cycle wrap as {@link EncounterWheelModel} DSum mapping; sub-step smooth scrolling for the strip. */
     private static double needleCycleFraction(final double angleDeg) {
         double a = angleDeg % 360.0;
@@ -457,6 +456,27 @@ public final class EncounterWheelBar extends JPanel {
             return;
         }
         final double dCenter = needleCycleFraction(model.getDisplayAngleDeg()) * DSUM_RANGE;
+        final double altOffsetDeg = model.getAlternateUncertaintyWedgeCenterOffsetDeg();
+        if (model.isShowAltCycleUncertaintyWedge() && Math.abs(altOffsetDeg) > 1e-3) {
+            final double dCenterAlt =
+                    needleCycleFraction(model.getDisplayAngleDeg() + altOffsetDeg) * DSUM_RANGE;
+            final Composite old = g.getComposite();
+            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, EncounterWheelModel.ALTERNATE_UNCERTAINTY_OVERLAY_ALPHA));
+            paintUncertaintyBandAtDCenter(g, translate, periodPx, viewW, bandY, bandH, dCenterAlt);
+            g.setComposite(old);
+        }
+        paintUncertaintyBandAtDCenter(g, translate, periodPx, viewW, bandY, bandH, dCenter);
+    }
+
+    /** @param dCenter DSum coordinate of wedge centre on the wrapping strip (matches {@link #needleCycleFraction(double)}×{@link #DSUM_RANGE}). */
+    private void paintUncertaintyBandAtDCenter(
+            final Graphics2D g,
+            final double translate,
+            final double periodPx,
+            final int viewW,
+            final int bandY,
+            final int bandH,
+            final double dCenter) {
         if (model.isDrawingOuterRbCycleUncertaintyBand()) {
             final double negDeg = model.getUncertaintyWedgeExtentNegDeg();
             final double posDeg = model.getUncertaintyWedgeExtentPosDeg();

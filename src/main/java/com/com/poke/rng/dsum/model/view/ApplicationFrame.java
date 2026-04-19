@@ -50,6 +50,7 @@ public final class ApplicationFrame extends JFrame {
         model.setPikaLead(cfg.pikaLead());
         model.setLeadLevel(cfg.leadLevel());
         model.setShowOuterRbCycleUncertaintyWedge(cfg.showOuterRbCycleUncertaintyBand());
+        model.setShowAltCycleUncertaintyWedge(cfg.showAltCycleUncertaintyWedge());
         model.modifyYellowOverworldDsumCycleModifier(cfg.modifierUi());
 
         wheel = new EncounterWheel(model);
@@ -73,6 +74,7 @@ public final class ApplicationFrame extends JFrame {
                 cfg.leadLevel(),
                 cfg.modifierUi(),
                 cfg.showOuterRbCycleUncertaintyBand(),
+                cfg.showAltCycleUncertaintyWedge(),
                 loaded.userPresets(),
                 this::promptAndSaveCurrentAsUserPreset,
                 game -> {
@@ -89,6 +91,11 @@ public final class ApplicationFrame extends JFrame {
                 wheelController::setSoundMuted,
                 b -> {
                     model.setShowOuterRbCycleUncertaintyWedge(b);
+                    wheel.repaint();
+                    wheelBar.repaint();
+                },
+                b -> {
+                    model.setShowAltCycleUncertaintyWedge(b);
                     wheel.repaint();
                     wheelBar.repaint();
                 },
@@ -227,7 +234,8 @@ public final class ApplicationFrame extends JFrame {
                             model.getCycleModifierUiValue(),
                             model.isPikaLead(),
                             model.getLeadLevel(),
-                            model.isShowOuterRbCycleUncertaintyWedge()));
+                            model.isShowOuterRbCycleUncertaintyWedge(),
+                            model.isShowAltCycleUncertaintyWedge()));
         } catch (final IOException e) {
             JOptionPane.showMessageDialog(
                     this,

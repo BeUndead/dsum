@@ -39,7 +39,6 @@ public final class EncounterWheel extends JPanel {
     private static final double PULSE_PERIOD_SEC = 2;
     private static final double PULSE_SIZE_FRACTION = 0.05;
     private static final float PULSE_BRIGHTNESS_AMOUNT = 1f;
-
     private final EncounterWheelModel model;
     private volatile double geomScale = DEFAULT_GEOM_SCALE;
 
@@ -416,14 +415,27 @@ public final class EncounterWheel extends JPanel {
         if (model.getCalibratedSlot() == null || model.isCalibrating()) {
             return;
         }
+        final double altOffset = model.getAlternateUncertaintyWedgeCenterOffsetDeg();
+        if (model.isShowAltCycleUncertaintyWedge() && Math.abs(altOffset) > 1e-3) {
+            final Composite old = g.getComposite();
+            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, EncounterWheelModel.ALTERNATE_UNCERTAINTY_OVERLAY_ALPHA));
+            drawUncertaintyWedgeAtCenterOffset(g, cx, cy, altOffset);
+            g.setComposite(old);
+        }
+        drawUncertaintyWedgeAtCenterOffset(g, cx, cy, 0.0);
+    }
 
+    /** @param centerOffsetDeg extra rotation vs arrow-up ({@code 90°}) for the wedge arc start, matching {@link EncounterWheelModel#getAlternateUncertaintyWedgeCenterOffsetDeg()}. */
+    private void drawUncertaintyWedgeAtCenterOffset(
+            final Graphics2D g, final int cx, final int cy, final double centerOffsetDeg) {
         final int outerR = gs(WHEEL_OUTER_RADIUS + 5);
         final int innerR = gs(WHEEL_INNER_RADIUS - 5);
+        final double baseDeg = 90.0 + centerOffsetDeg;
         if (model.isDrawingOuterRbCycleUncertaintyBand()) {
             final double n = model.getUncertaintyWedgeExtentNegDeg();
             final double p = model.getUncertaintyWedgeExtentPosDeg();
             final Shape outerSlice =
-                    createRingSlice(cx, cy, outerR, innerR, 90 - n, n + p, false);
+                    createRingSlice(cx, cy, outerR, innerR, baseDeg - n, n + p, false);
             g.setColor(UiTheme.UNCERTAINTY_OUTER_FILL);
             g.fill(outerSlice);
             g.setColor(UiTheme.UNCERTAINTY_OUTER_STROKE);
@@ -434,7 +446,7 @@ public final class EncounterWheel extends JPanel {
         final double inNeg = model.getInnerUncertaintyWedgeExtentNegDeg();
         final double inPos = model.getInnerUncertaintyWedgeExtentPosDeg();
         final Shape innerSlice =
-                createRingSlice(cx, cy, outerR, innerR, 90 - inNeg, inNeg + inPos, false);
+                createRingSlice(cx, cy, outerR, innerR, baseDeg - inNeg, inNeg + inPos, false);
         g.setColor(UiTheme.UNCERTAINTY_FILL);
         g.fill(innerSlice);
         g.setColor(UiTheme.UNCERTAINTY_STROKE);

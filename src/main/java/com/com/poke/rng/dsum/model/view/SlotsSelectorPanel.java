@@ -35,6 +35,7 @@ public final class SlotsSelectorPanel extends JPanel {
     private final JLabel leadLabel;
     private final JCheckBox pikachu;
     private final JCheckBox outerRbCycleUncertainty;
+    private final JCheckBox altCycleUncertainty;
     private final JToggleButton soundMute;
     private final SpinnerNumberModel modifierModel;
     private final SpinnerNumberModel leadModel;
@@ -56,6 +57,7 @@ public final class SlotsSelectorPanel extends JPanel {
             final int initialLeadLevel,
             final int initialModifierUi,
             final boolean defaultOuterRbCycleUncertainty,
+            final boolean defaultAltCycleUncertainty,
             final List<EncounterSetupPreset> userPresets,
             final Runnable onAddCurrentPresetRequested,
             final Consumer<Game> onGameChanged,
@@ -65,6 +67,7 @@ public final class SlotsSelectorPanel extends JPanel {
             final Consumer<Integer> onLeadLevelChanged,
             final Consumer<Boolean> onSoundMutedChanged,
             final Consumer<Boolean> onOuterRbCycleUncertaintyChanged,
+            final Consumer<Boolean> onAltCycleUncertaintyChanged,
             final Runnable onRefocusCalibrationSurface,
             final Consumer<List<EncounterSlot>> onPresetTargetsApplied) {
 
@@ -106,6 +109,18 @@ public final class SlotsSelectorPanel extends JPanel {
         outerRbCycleUncertainty.getAccessibleContext().setAccessibleName("Accurate uncertainty");
         outerRbCycleUncertainty.addActionListener(
                 e -> onOuterRbCycleUncertaintyChanged.accept(outerRbCycleUncertainty.isSelected()));
+
+        altCycleUncertainty = new JCheckBox();
+        altCycleUncertainty.setText("Alt cycle");
+        altCycleUncertainty.setForeground(UiTheme.TEXT_PRIMARY);
+        altCycleUncertainty.setSelected(defaultAltCycleUncertainty);
+        altCycleUncertainty.setToolTipText(
+                "Red/Blue calibrated overworld: when on, draws a second semi-transparent uncertainty wedge where the band "
+                        + "would sit if DSum had stepped at the alternate overworld cycle length (410 f) instead of nominal "
+                        + "(374 f) for the same elapsed time.");
+        altCycleUncertainty.getAccessibleContext().setAccessibleName("Alt cycle");
+        altCycleUncertainty.addActionListener(
+                e -> onAltCycleUncertaintyChanged.accept(altCycleUncertainty.isSelected()));
 
         leadLabel = new JLabel("Lead Lv:");
         leadLabel.setForeground(UiTheme.TEXT_MUTED);
@@ -237,6 +252,7 @@ public final class SlotsSelectorPanel extends JPanel {
         detailsRowChecks.setOpaque(false);
         detailsRowChecks.add(pikachu);
         detailsRowChecks.add(outerRbCycleUncertainty);
+        detailsRowChecks.add(altCycleUncertainty);
         detailsRowChecks.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         final JPanel detailsRowPresets = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -330,6 +346,7 @@ public final class SlotsSelectorPanel extends JPanel {
         leadLabel.setForeground(UiTheme.TEXT_MUTED);
         pikachu.setForeground(UiTheme.TEXT_PRIMARY);
         outerRbCycleUncertainty.setForeground(UiTheme.TEXT_PRIMARY);
+        altCycleUncertainty.setForeground(UiTheme.TEXT_PRIMARY);
         soundMute.setForeground(UiTheme.TEXT_PRIMARY);
         soundMute.repaint();
         detailsToggle.setForeground(UiTheme.ACCENT);

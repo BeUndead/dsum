@@ -11,10 +11,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 
-// TODO - Calibration seems to be off by some amount...
-// - Could be the time spent in battle?
-// - Could be the countdown / turnaround afterwards?
-
 /**
  * DSum wheel state: overworld vs in-battle stepping, calibration (entry rewind, slot pick, post-clear window), and
  * uncertainty wedges for targets and suggestions. Fields are {@code volatile} so UI paint sees {@link #update(long)}
@@ -27,8 +23,11 @@ public class EncounterWheelModel {
      * digit; whichever of those was pressed most recently wins. {@code N} restores default ({@link #NORMAL}).
      */
     public enum CalibratePostClearTiming {
+        /** Hotkey {@code N} (default): player ran away. */
         NORMAL,
+        /** Hotkey {@code R}: poke ran away. */
         RAN_AWAY,
+        /** Hotkey {@code B}: send to box. */
         SENT_TO_BOX,
         /** Hotkey {@code A}: nickname / alias screen. */
         NICKNAME,
@@ -41,7 +40,8 @@ public class EncounterWheelModel {
 
     // Red/Blue:
     // Average number of frames for one DSum cycle out of battle (counting down).
-    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 374.0;
+    private static final double OVERWORLD_DSUM_CYCLE_FRAMES = 373.4160401;
+    private static final double ALTERNATE_OVERWORLD_DSUM_CYCLE_FRAMES = 405.6531365;
     /**
      * Empirical envelope for Red/Blue overworld DSum cycle length (frames). The model advances the needle using
      * {@link #OVERWORLD_DSUM_CYCLE_FRAMES}; wedge width on calibrated overworld adds spread from the min/max rates.
@@ -49,7 +49,7 @@ public class EncounterWheelModel {
     private static final double RB_OVERWORLD_CYCLE_LENGTH_MIN_FRAMES = 367.0;
     private static final double RB_OVERWORLD_CYCLE_LENGTH_MAX_FRAMES = 415.0;
     // Average number of frames for one DSum cycle in battle (counting up).
-    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 783.0;
+    private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 791.5555556;
 
     /** Total frames from encounter to battle visible: spiral wipe (includes {@link #ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES} overworld continuation + in-battle segment). */
     private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 103L;
@@ -79,10 +79,10 @@ public class EncounterWheelModel {
      * Blinds entry: overworld-style frames after encounter before in-battle stepping dominates (same sign as
      * {@link #update(long)} overworld branch). Spiral routes use {@link #ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES}.
      */
-    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES = 8;
+    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES = 7L;
 
     /** Spiral / wipe (non-blinds): overworld continuation frame count (split with total {@code A} in entry geometry). */
-    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES = 8;
+    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES = 9L;
 
     /** Yellow overworld nominal cycle length (frames); sign matches internal convention; use {@link #modifyYellowOverworldDsumCycleModifier(double)} to tune. */
     private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE = -800.8647059;
@@ -97,6 +97,10 @@ public class EncounterWheelModel {
     private static final double ONE_FRAME_NS = 1_000_000_000.0 / FRAME_RATE;
 
     private static final double OVERWORLD_CYCLE_NS = ONE_FRAME_NS * OVERWORLD_DSUM_CYCLE_FRAMES;
+    /** Hypothetical overworld period (ns) if DSum advanced at {@link #ALTERNATE_OVERWORLD_DSUM_CYCLE_FRAMES} instead. */
+    private static final double ALTERNATE_OVERWORLD_CYCLE_NS = ONE_FRAME_NS * ALTERNATE_OVERWORLD_DSUM_CYCLE_FRAMES;
+    /** Alpha for the ghost alternate-cycle wedge under the primary in wheel/bar views. */
+    public static final float ALTERNATE_UNCERTAINTY_OVERLAY_ALPHA = 0.48f;
     private static final double YELLOW_OVERWORLD_CYCLE_NS = ONE_FRAME_NS * YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE;
     private static final double IN_BATTLE_CYCLE_NS = ONE_FRAME_NS * IN_BATTLE_DSUM_CYCLE_FRAMES;
     private static final double YELLOW_IN_BATTLE_CYCLE_NS = ONE_FRAME_NS * YELLOW_IN_BATTLE_DSUM_CYCLE_FRAMES;
@@ -219,6 +223,8 @@ public class EncounterWheelModel {
      * painted outer ring omit that slack.
      */
     private volatile boolean showOuterRbCycleUncertaintyWedge = false;
+    /** UI: show semi-transparent alternate-cycle (410 f) ghost wedge under the primary when Red/Blue calibrated overworld. */
+    private volatile boolean showAltCycleUncertaintyWedge = false;
 
     public EncounterWheelModel(final EncounterSlot targetSlot, final Game game) {
         this.targetSlots = List.of(targetSlot);
@@ -266,6 +272,14 @@ public class EncounterWheelModel {
     public void setShowOuterRbCycleUncertaintyWedge(final boolean show) {
         showOuterRbCycleUncertaintyWedge = show;
         refreshTargetOverlapApproachProgress();
+    }
+
+    public boolean isShowAltCycleUncertaintyWedge() {
+        return showAltCycleUncertaintyWedge;
+    }
+
+    public void setShowAltCycleUncertaintyWedge(final boolean show) {
+        showAltCycleUncertaintyWedge = show;
     }
 
     /**
@@ -713,12 +727,12 @@ public class EncounterWheelModel {
 
         final double overworldPhaseDeg = -((overworldPhaseNs / overworldNs) * 360.0);
         final double inBattlePhaseDeg = ((inBattlePhaseNs / inBattleNs) * 360.0);
-        final double postClearInBattleDeg = (((postClearCountUpFrames - PAUSE_AFTER_EXIT_FRAMES) * ONE_FRAME_NS) / inBattleNs) * 360.0;
         // There is also a pause in the DSum for PAUSE_AFTER_EXIT_FRAMES.  We account for this by over-rotating by the
         // overworld rate for those extra frames NOW, so that after those frames, while rotating at the overworld rate
         // we UNDO this extra rotation.  The actual DSum will be out for this time, but since you won't be getting an
         // encounter while it fades back to the overworld, it doesn't matter.
-        final double postClearOverworldDeg = (((postClearCountUpFrames + PAUSE_AFTER_EXIT_FRAMES) * ONE_FRAME_NS) / overworldNs) * 360.0;
+        final double postClearInBattleDeg = (((postClearCountUpFrames - PAUSE_AFTER_EXIT_FRAMES) * ONE_FRAME_NS) / inBattleNs) * 360.0;
+        final double postClearOverworldDeg = (((postClearCountUpFrames + PAUSE_AFTER_EXIT_FRAMES - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
 
         final double rotationSinceBattleVisible = overworldPhaseDeg + inBattlePhaseDeg + postClearInBattleDeg + postClearOverworldDeg;
         final double totalInBattleDegForWedgeGrowth = inBattlePhaseDeg + postClearInBattleDeg;
@@ -1042,6 +1056,23 @@ public class EncounterWheelModel {
         final double[] np = new double[2];
         fillInnerUncertaintyWedgeNegPosDeg(np);
         return np[1];
+    }
+
+    /**
+     * Rotation (°) to offset a second uncertainty wedge that uses the same span/calibration as the needle-centred
+     * wedge, but is centred where DSum would be if overworld had stepped at {@link #ALTERNATE_OVERWORLD_DSUM_CYCLE_FRAMES}
+     * instead of {@link #OVERWORLD_DSUM_CYCLE_FRAMES} for {@link #rbOverworldElapsedForCycleUncertaintyNs}. Red/Blue
+     * calibrated overworld only; otherwise {@code 0}.
+     */
+    public double getAlternateUncertaintyWedgeCenterOffsetDeg() {
+        if (calibratedSlot == null || (game != Game.RED && game != Game.BLUE)) {
+            return 0.0;
+        }
+        final long dtNs = rbOverworldElapsedForCycleUncertaintyNs;
+        if (dtNs <= 0L) {
+            return 0.0;
+        }
+        return dtNs * 360.0 * (1.0 / OVERWORLD_CYCLE_NS - 1.0 / ALTERNATE_OVERWORLD_CYCLE_NS);
     }
 
     private void fillUncertaintyWedgeNegPosDeg(final double[] out) {

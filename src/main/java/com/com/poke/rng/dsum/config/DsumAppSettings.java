@@ -16,7 +16,8 @@ public record DsumAppSettings(
         int modifierUi,
         boolean pikaLead,
         int leadLevel,
-        boolean showOuterRbCycleUncertaintyBand) {
+        boolean showOuterRbCycleUncertaintyBand,
+        boolean showAltCycleUncertaintyWedge) {
 
     public static DsumAppSettings defaults() {
         return new DsumAppSettings(
@@ -26,6 +27,7 @@ public record DsumAppSettings(
                 0,
                 true,
                 70,
+                false,
                 false);
     }
 }

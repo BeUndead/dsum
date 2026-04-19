@@ -32,6 +32,7 @@ public final class DsumConfigStore {
     private static final String KEY_PIKA_LEAD = "pika.lead";
     private static final String KEY_LEAD_LEVEL = "lead.level";
     private static final String KEY_UNCERTAINTY_OUTER_RB = "uncertainty.outer.rb.cycle";
+    private static final String KEY_UNCERTAINTY_ALT_CYCLE = "uncertainty.alt.cycle";
 
     private static final String STORE_COMMENT =
             "DSum — Cmd+S saves main keys; preset.count + preset.1.label, preset.1.game, …; Add preset… in Details.";
@@ -81,6 +82,7 @@ public final class DsumConfigStore {
         p.setProperty(KEY_PIKA_LEAD, Boolean.toString(s.pikaLead()));
         p.setProperty(KEY_LEAD_LEVEL, Integer.toString(s.leadLevel()));
         p.setProperty(KEY_UNCERTAINTY_OUTER_RB, Boolean.toString(s.showOuterRbCycleUncertaintyBand()));
+        p.setProperty(KEY_UNCERTAINTY_ALT_CYCLE, Boolean.toString(s.showAltCycleUncertaintyWedge()));
         Files.createDirectories(path.getParent());
         storeToPath(path, p);
     }
@@ -130,7 +132,8 @@ public final class DsumConfigStore {
             final int modifierUi,
             final boolean pikaLead,
             final int leadLevel,
-            final boolean showOuterRbCycleUncertaintyBand) {
+            final boolean showOuterRbCycleUncertaintyBand,
+            final boolean showAltCycleUncertaintyWedge) {
         final List<EncounterSlot> slots =
                 targetSlots == null ? List.of() : List.copyOf(targetSlots);
         return new DsumAppSettings(
@@ -140,7 +143,8 @@ public final class DsumConfigStore {
                 modifierUi,
                 pikaLead,
                 leadLevel,
-                showOuterRbCycleUncertaintyBand);
+                showOuterRbCycleUncertaintyBand,
+                showAltCycleUncertaintyWedge);
     }
 
     private static DsumAppSettings fromProperties(final Properties p) {
@@ -157,7 +161,9 @@ public final class DsumConfigStore {
         final int lead = parseInt(p.getProperty(KEY_LEAD_LEVEL), d.leadLevel(), 1, 100);
         final boolean outerRb =
                 parseBool(p.getProperty(KEY_UNCERTAINTY_OUTER_RB), d.showOuterRbCycleUncertaintyBand());
-        return new DsumAppSettings(game, route, targets, modifier, pika, lead, outerRb);
+        final boolean altCycle =
+                parseBool(p.getProperty(KEY_UNCERTAINTY_ALT_CYCLE), d.showAltCycleUncertaintyWedge());
+        return new DsumAppSettings(game, route, targets, modifier, pika, lead, outerRb, altCycle);
     }
 
     private static List<EncounterSetupPreset> parseUserPresets(final Properties p) {
