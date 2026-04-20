@@ -51,29 +51,24 @@ public class EncounterWheelModel {
     // Average number of frames for one DSum cycle in battle (counting up).
     private static final double IN_BATTLE_DSUM_CYCLE_FRAMES = 791.5555556;
 
-    /** Total frames from encounter to battle visible: spiral wipe (includes {@link #ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES} overworld continuation + in-battle segment). */
-    private static final long COUNT_UP_BEFORE_SPIRAL_END_FRAMES = 103L;
-    /** Same role for full-length spiral wipe (alt animation). */
-    private static final long COUNT_UP_BEFORE_FULL_SPIRAL_END_FRAMES = 133L;
     /** Yellow: total entry frames for normal spiral. */
     private static final long COUNT_UP_BEFORE_YELLOW_SPIRAL_END_FRAMES = 135;
     /** Yellow: total entry frames for full spiral. */
     private static final long COUNT_UP_BEFORE_YELLOW_FULL_SPIRAL_END_FRAMES = 152;
 
-    /**
-     * Blinds only: in-battle DSum steps after {@link #ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES}; total blinds entry =
-     * {@code 28 +} this (normal) or {@code 28 +} {@link #COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES} (vertical).
-     */
-    private static final long COUNT_UP_BEFORE_BLINDS_END_FRAMES = 63L;
-    /** Blinds alt (vertical wipe): in-battle segment length after the same overworld continuation. */
-    private static final long COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES = 56L;
+    private static final long HORIZONTAL_BLINDS_FRAMES = 70L;
+    private static final long VERTICALAL_BLINDS_FRAMES = 64L;
+    private static final long SPLIT_SPIRAL_FRAMES = 110L;
+    private static final long FULL_SPIRAL_FRAMES = 142L;
 
-    private static final long PAUSE_AFTER_EXIT_FRAMES = 4L;
+    // Looks like last 4 frames it's counting down again.
+    private static final long OVERWORLD_RETURN_FRAMES = 3L;
+
     private static final long COUNT_UP_AFTER_GOT_AWAY_FRAMES = 37L;
-    private static final long COUNT_UP_AFTER_RUN_FRAMES = 73L;
-    private static final long COUNT_UP_AFTER_SENT_TO_BOX_FRAMES = 23L;
+    private static final long COUNT_UP_AFTER_RUN_FRAMES = 77L;
+    private static final long COUNT_UP_AFTER_SENT_TO_BOX_FRAMES = 22L;
     private static final long COUNT_UP_AFTER_JOIN_PARTY_FRAMES = 37L;
-    private static final long COUNT_UP_AFTER_NICKNAME_FRAMES = 29L;
+    private static final long COUNT_UP_AFTER_NICKNAME_FRAMES = 30L;
 
     /**
      * Blinds entry: overworld-style frames after encounter before in-battle stepping dominates (same sign as
@@ -82,7 +77,7 @@ public class EncounterWheelModel {
     private static final long ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES = 7L;
 
     /** Spiral / wipe (non-blinds): overworld continuation frame count (split with total {@code A} in entry geometry). */
-    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES = 9L;
+    private static final long ENCOUNTER_OVERWORLD_CONTINUATION_SPIRAL_FRAMES = 7L;
 
     /** Yellow overworld nominal cycle length (frames); sign matches internal convention; use {@link #modifyYellowOverworldDsumCycleModifier(double)} to tune. */
     private static final double YELLOW_OVERWORLD_DSUM_CYCLE_FRAMES_BASE = -800.8647059;
@@ -140,10 +135,10 @@ public class EncounterWheelModel {
     private volatile int leadLevel = 70;
 
     /**
-     * Last {@link #countUpFramesBeforeBattleVisible(boolean)} from {@link #battleStart(boolean)} — for animation-length
+     * Last {@link #framesBeforeBattleVisible(boolean)} from {@link #battleStart(boolean)} — for animation-length
      * mismatch when route wild level implies a different alt wipe than assumed.
      */
-    private volatile long assumedBattleAnimationFrames = COUNT_UP_BEFORE_SPIRAL_END_FRAMES;
+    private volatile long assumedBattleAnimationFrames = SPLIT_SPIRAL_FRAMES;
 
     private volatile long overworldStartTime = System.nanoTime();
     private volatile long lastNow = overworldStartTime;
@@ -180,7 +175,6 @@ public class EncounterWheelModel {
      * live needle (the wedge is not painted during calibration).
      */
     private volatile Triplet<Integer, Integer, Integer> innerSuggestedRangeAtBattleStart = null;
-    private volatile Triplet<Integer, Integer, Integer> fullSuggestedRangeAtBattleStart = null;
 
     private volatile EncounterSlot calibratedSlot;
     /** Manual wedge tweak via hotkeys ({@link #uncertaintyDelta}). */
@@ -363,7 +357,7 @@ public class EncounterWheelModel {
      */
     private BattleEntryGeometry computeBattleEntryGeometry(final boolean altAnimation, final double overworldAngleDeg) {
         final Game game = this.game;
-        final long animationFrames = countUpFramesBeforeBattleVisible(altAnimation);
+        final long animationFrames = framesBeforeBattleVisible(altAnimation);
         final double overworldNs = overworldCycleNs();
         final double inBattleNs = game == Game.YELLOW ? YELLOW_IN_BATTLE_CYCLE_NS : IN_BATTLE_CYCLE_NS;
         final long overworldContinuationFrames =
@@ -508,15 +502,13 @@ public class EncounterWheelModel {
      * Frames from encounter generation until end of entry (Space): blinds = continuation + in-battle segment; spirals =
      * total length {@code A} (see {@link #computeBattleEntryGeometry} for split {@code C} vs {@code A−C}).
      */
-    private long countUpFramesBeforeBattleVisible(final boolean altAnimation) {
+    private long framesBeforeBattleVisible(final boolean altAnimation) {
         if (isBlinds) {
-            final long inBattleOnly =
-                    altAnimation ? COUNT_UP_BEFORE_VERTICAL_BLINDS_END_FRAMES : COUNT_UP_BEFORE_BLINDS_END_FRAMES;
-            return ENCOUNTER_OVERWORLD_CONTINUATION_FRAMES + inBattleOnly;
+            return altAnimation ? VERTICALAL_BLINDS_FRAMES : HORIZONTAL_BLINDS_FRAMES;
         }
         return game == Game.YELLOW ?
                 (altAnimation ? COUNT_UP_BEFORE_YELLOW_FULL_SPIRAL_END_FRAMES : COUNT_UP_BEFORE_YELLOW_SPIRAL_END_FRAMES) :
-                (altAnimation ? COUNT_UP_BEFORE_FULL_SPIRAL_END_FRAMES : COUNT_UP_BEFORE_SPIRAL_END_FRAMES);
+                (altAnimation ? FULL_SPIRAL_FRAMES : SPLIT_SPIRAL_FRAMES);
     }
 
     /** Gen 1 alternate battle wipe when the wild is at least 3 levels above the player's lead. */
@@ -581,7 +573,7 @@ public class EncounterWheelModel {
 
     public void battleStart(final boolean altAnimation) {
         final long now = System.nanoTime();
-        final long animationFrames = countUpFramesBeforeBattleVisible(altAnimation);
+        final long animationFrames = framesBeforeBattleVisible(altAnimation);
         assumedBattleAnimationFrames = animationFrames;
         /* battleEnterTime after rangeAtBattleStart so {@link #fillUncertaintyWedgeNegPosDeg} still sees pre-battle state. */
         final BattleEntryGeometry geom = computeBattleEntryGeometry(altAnimation, angleDeg);
@@ -591,7 +583,6 @@ public class EncounterWheelModel {
         final double encounterAngleForSuggestions =
                 encounterMappedAngleDegForDsum(angleDeg, geom.encounterOffsetDeg());
         innerSuggestedRangeAtBattleStart = computeDsumRangeInnerOnlyAtAngle(encounterAngleForSuggestions);
-        fullSuggestedRangeAtBattleStart = computeDsumRangeFullAtAngle(encounterAngleForSuggestions);
 
         refreshTargetOverlapApproachProgress();
     }
@@ -617,7 +608,6 @@ public class EncounterWheelModel {
         battleEnterTime = -1;
         rangeAtBattleStart = null;
         innerSuggestedRangeAtBattleStart = null;
-        fullSuggestedRangeAtBattleStart = null;
         suggestedSlots = null;
         manualAngleOffsetDeltaDeg = 0;
         warningBeepPending = false;
@@ -702,14 +692,15 @@ public class EncounterWheelModel {
         final Triplet<Integer, Integer, Integer> innerSuggestedSnapshot = innerSuggestedRangeAtBattleStart;
         final Optional<InnerSuggestedSlotOverlap> slotOverlapOpt =
                 innerSuggestedSnapshot != null
-                        ? computeInnerSuggestedSlotOverlap(slot, innerSuggestedSnapshot)
+                        ? computeInnerSuggestedSlotOverlap(slot, innerSuggestedSnapshot).filter(
+                                o -> Math.abs(o.anchorMax - o.anchorMin) > 10)
                         : Optional.empty();
         long timeInBattle = now - battleEnterTime;
 
         if (route != null) {
             final Encounter enc = route.encounterFor(game, slot);
             if (enc != null) {
-                final long actualFrames = countUpFramesBeforeBattleVisible(altAnimationForLevels(enc.level(), leadLevel));
+                final long actualFrames = framesBeforeBattleVisible(altAnimationForLevels(enc.level(), leadLevel));
                 final long deltaFrames = actualFrames - assumedBattleAnimationFrames;
                 timeInBattle += (long) (deltaFrames * ONE_FRAME_NS);
             }
@@ -727,35 +718,25 @@ public class EncounterWheelModel {
 
         final double overworldPhaseDeg = -((overworldPhaseNs / overworldNs) * 360.0);
         final double inBattlePhaseDeg = ((inBattlePhaseNs / inBattleNs) * 360.0);
-        // There is also a pause in the DSum for PAUSE_AFTER_EXIT_FRAMES.  We account for this by over-rotating by the
-        // overworld rate for those extra frames NOW, so that after those frames, while rotating at the overworld rate
-        // we UNDO this extra rotation.  The actual DSum will be out for this time, but since you won't be getting an
-        // encounter while it fades back to the overworld, it doesn't matter.
-        final double postClearInBattleDeg;
-        final double postClearOverworldDeg;
-        if (route.isSafari()) {
-            postClearInBattleDeg =
-                    (((postClearCountUpFrames - PAUSE_AFTER_EXIT_FRAMES) * ONE_FRAME_NS) / inBattleNs) * 360.0;
-            postClearOverworldDeg =
-                    (((postClearCountUpFrames + PAUSE_AFTER_EXIT_FRAMES - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
-        } else {
-            postClearInBattleDeg = 0;
-            postClearOverworldDeg = (((postClearCountUpFrames - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
-        }
+        final double postClearInBattleDeg =
+                (((postClearCountUpFrames - OVERWORLD_RETURN_FRAMES) * ONE_FRAME_NS) / inBattleNs) * 360.0;
+        final double postClearOverworldDeg =
+                (((postClearCountUpFrames - OVERWORLD_RETURN_FRAMES + 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
 
-        final double rotationSinceBattleVisible = overworldPhaseDeg + inBattlePhaseDeg + postClearInBattleDeg + postClearOverworldDeg;
+        final double rotationSinceBattleVisible = overworldPhaseDeg + inBattlePhaseDeg;
         final double totalInBattleDegForWedgeGrowth = inBattlePhaseDeg + postClearInBattleDeg;
+
+        final double postClearShenanigans = (postClearOverworldDeg + postClearInBattleDeg);
 
         final double anchorAngle =
                 slotOverlapOpt
                         .map(o -> battleStartAngleForVirtualInclusiveDsumRange(o.anchorMin(), o.anchorMax()))
                         .orElseGet(() -> battleStartAngleForVirtualInclusiveDsumRange(slot.min(), slot.max()));
-        final double newAngle = norm360(anchorAngle + rotationSinceBattleVisible);
+        final double newAngle = norm360(anchorAngle + rotationSinceBattleVisible + postClearShenanigans);
         // Align with {@link #update()} overworld step for elapsed wall time since lastNow.
         angleDeg = newAngle - ((now - lastNow) / overworldNs) * 360.0;
         battleEnterTime = -1;
         innerSuggestedRangeAtBattleStart = null;
-        fullSuggestedRangeAtBattleStart = null;
         calibratedSlot = slot;
         hasCalibratedAtLeastOnce = true;
         rbOverworldElapsedForCycleUncertaintyNs = 0;
