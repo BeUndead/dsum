@@ -1740,4 +1740,9 @@ public enum Route {
     public boolean isBlinds() {
         return isBlinds;
     }
+
+    public boolean isSafari() {
+        return this == SAFARI_ZONE_CENTER || this == SAFARI_ZONE_EAST
+                || this == SAFARI_ZONE_2 || this == SAFARI_ZONE_3;
+    }
 }

@@ -731,8 +731,17 @@ public class EncounterWheelModel {
         // overworld rate for those extra frames NOW, so that after those frames, while rotating at the overworld rate
         // we UNDO this extra rotation.  The actual DSum will be out for this time, but since you won't be getting an
         // encounter while it fades back to the overworld, it doesn't matter.
-        final double postClearInBattleDeg = (((postClearCountUpFrames - PAUSE_AFTER_EXIT_FRAMES) * ONE_FRAME_NS) / inBattleNs) * 360.0;
-        final double postClearOverworldDeg = (((postClearCountUpFrames + PAUSE_AFTER_EXIT_FRAMES - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
+        final double postClearInBattleDeg;
+        final double postClearOverworldDeg;
+        if (route.isSafari()) {
+            postClearInBattleDeg =
+                    (((postClearCountUpFrames - PAUSE_AFTER_EXIT_FRAMES) * ONE_FRAME_NS) / inBattleNs) * 360.0;
+            postClearOverworldDeg =
+                    (((postClearCountUpFrames + PAUSE_AFTER_EXIT_FRAMES - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
+        } else {
+            postClearInBattleDeg = 0;
+            postClearOverworldDeg = (((postClearCountUpFrames - 1) * ONE_FRAME_NS) / overworldNs) * 360.0;
+        }
 
         final double rotationSinceBattleVisible = overworldPhaseDeg + inBattlePhaseDeg + postClearInBattleDeg + postClearOverworldDeg;
         final double totalInBattleDegForWedgeGrowth = inBattlePhaseDeg + postClearInBattleDeg;
