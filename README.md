@@ -3,18 +3,13 @@
 This is a first pass at making a visual DSum timer application, which can be used
 live while playing the game (rather than pre-calculated charts).
 
-![AppFull.png](images/AppFull.png)
-
-The app also has a compact mode
-
-![AppCompact.PNG](images/AppCompact.PNG)
+![AppFull.png](images/DSumVF.png)
 
 ## Usage
 
-There are 2 videos:
+A quick video shows the main usage:
 
-1. [Golduck in Seafoam](https://drive.google.com/file/d/1S16nG32QZo3U0_6VtadeCOWIxV48cy1U/view?usp=sharing)
-2. [Pikachu in Forest](https://drive.google.com/file/d/10hQiSj7v5NSRKDpKphSjmGEtevBbQhkx/view?usp=sharing)
+1. [Scyther in Safari](https://drive.google.com/file/d/1a_D5PaYan9_6bSNX4HQiEpOfHb4vZFix/view?usp=sharing)
 
 These show the basic use of the application.
 
@@ -25,8 +20,6 @@ These show the basic use of the application.
 
 #### Optional adjustment keys (after you are used to the basics):
 
-- **[-] / [=]** — Nudge the **uncertainty wedge** narrower or wider (manual correction if the wedge feels too pessimistic or too tight).
-- **[\[] / [\]]** — Small **manual angle** nudge on the wheel (degrees per step), if you need to align the readout with a known state.
 - **[Delete]** — **Clear calibration**: forget the calibrated slot, cancel an in-progress battle transition, clear suggested-slot highlights (until you calibrate again), and go back to pure overworld rotation. Does not change the current needle angle, game, route, lead level, Pikachu-lead flag, target slots, Yellow modifier, or outer-cycle band setting.
 
 ## Calibration in more detail
@@ -37,7 +30,7 @@ Use the **encounter slot toggles** under the wheel (or the compact strip) to sel
 
 ### 2. Start a calibration encounter
 
-Enter a wild battle normally. When the wipe begins, press **Space** (or **Shift+Space** if that battle used the alternate entry timing, as above).
+Enter a wild battle normally. When the wipe ends, press **Space**.
 
 The wheel switches to **in-battle** behaviour: DSum advances at the in-battle rate while the needle is fixed at the top.
 
@@ -48,64 +41,31 @@ Run from the encounter. When the message appears and you clear it, press the num
 From that moment the app:
 
 1. Computes where the DSum **must have been** at encounter generation from the slot midpoint, your time in battle, and the **route’s** encounter data (see **Lead level** below for animation-length correction).
-2. Centers the **uncertainty wedge** on the needle: a translucent band on the wheel whose width comes from **how wide the calibrated slot is**, **how long you stayed in battle** (wedge widens as DSum completes more in-battle rotations), plus any **[-]/[=]** tweaks.
+2. Centers the **uncertainty wedge** on the needle: a translucent band on the wheel whose width comes from **how wide the calibrated slot is**, **how long you stayed in battle**.
 3. Returns to **overworld** rotation (DSum counting down between battles).
+
+For other battle end types, there are buttons which (while 'In Battle' mode) you can press to indicate the battle exit type.
+
+- [T] = Pokemon captured and joined your party (no nickname).
+- [N] = Pokemon captured and joined your party (nicknamed).
+- [B] = Pokemon captured and sent to PC.
+- [R] = Pokemon ran (Safari Zone exclusive).
+
+For each of these, press the button at any time while 'In Battle' mode; and continue to press the slot number that you encountered, when clearing trhe final text box.
 
 ### 4. Hunting
 
-When **any** selected **target** overlaps the wedge, the UI treats that as “good to search”: background tint, optional hum, and an approach bar when applicable. **Suggested** slots (the amber band along the likely chain) are a separate hint; **targets** are drawn with an extra **green** highlight on top so your goal stays obvious even when several slots in the chain are highlighted in amber.
+When **any** selected **target** overlaps the wedge, the UI treats that as “good to search”: background tint. **Suggested** slots are a separate hint; **targets** are drawn with an extra **green** highlight on top so your goal stays obvious even when several slots in the chain are highlighted in amber.
 
-If your first calibration is a **very wide** slot, the wedge can be huge. A common tactic is to calibrate roughly on that slot, aim at a **narrow** slot next, run another encounter on the narrow one, and calibrate again so the wedge shrinks.
+If your first calibration is a **very wide** slot, the wedge can be huge. A useful approach is to calibrate roughly on that slot, aim at any of the smaller slots, so that the large wedge covers multiple slots.  Then, you are likely to encounter a much smaller window on your next encounter.
 
-### Yellow oddities
+### 5. Notes
 
-Yellow’s overworld DSum cycle length can land in a fairly wide range and **stays fixed for that save on that route** until you change it (e.g. soft reset). The app defaults to a middling cycle; if timing drifts, use the **modifier** spinner in details (steps of 10 “frame-equivalents”) to stretch or compress the overworld cycle until predictions line up.
+The 'Lead Level' is only relevant if you are 3 or more levels lower than some Pokemon on the route.  This causes a different entry animation, so takes a different amount of time.
 
-To avoid fighting the modifier, you can **save in the area** where you DSum and **soft reset**: that tends to land the cycle near the default the app assumes, so you may not need the spinner after that.
+The 'threshold' is what likelihood of your targets appearing do you want the app to turn green on.  The default is 0.1 (or 10%) since (for example) certain slots can **never** go over this value (Slot 10 in the Safari Zone, for instance).
 
----
 
-## Additional controls (UI)
+## Yellow
 
-These do not replace the videos for basic flow; they tune the simulation to your save and play style.
-
-### Game and route
-
-Select the game (**Red / Blue / Yellow**) and the **route** you are on. The route table supplies **wild species and levels** per slot, which matters for calibration correction when animation length depends on **wild level vs. your lead** (see Lead level).
-
-### Encounter slot toggles
-
-Each column is one encounter table slot. Toggle **on** every slot you are willing to hit while hunting (your **targets**). The timer only treats overlap with **those** slots as “search now” for tint / hum / bar logic. You can select **multiple** targets.
-
-### Movement mode (Move: corner / bike / walk)
-
-Picks **step lag after a step** (corner **0**, bike **9**, walking **17** frames): the **wheel ring** (and **amber suggested-slot band**) use that offset so what you see under the needle matches post-step alignment. **Overlap tint, hum, approach bar, and beeps** still use the **live** counter only (no lag) so “search now” timing matches hardware DSum.
-
-### Lead level
-
-Your **lead Pokémon’s level** in the party. The game uses a **stronger** battle entry animation when the wild is **at least three levels above** your lead; that changes how many frames DSum advances before the wipe you see. The app uses **route + lead level** when you calibrate with a number key to correct for that, so set this to your **real** lead level before relying on fine hunting.
-
-### Pikachu lead (Yellow only)
-
-Visible for Yellow. Accounts for the extra **Pikachu cry** pause at battle start when Pikachu is in the lead, so Yellow timing is not systematically offset.
-
-### Modifier (Mod) — mostly Yellow
-
-Shown in the details row. On **Yellow**, this adjusts the assumed **overworld** DSum cycle length (see above). For Red/Blue the underlying model field exists but typical play uses the default cycle; the spinner is there for edge cases.
-
-### Details vs. Setup (compact view)
-
-In **full** view, **Details…** expands an inline row (lead level, modifier, Pika, etc.). In **compact** view, that row is hidden and **Setup…** opens the same controls in a small dialog so the layout stays short.
-
-### View (full / compact)
-
-**Full** shows the large wheel; **compact** swaps in a horizontal **strip** with the same logic (needle in the centre, scrolling slots). Use compact if you want a smaller window footprint.
-
-### Appearance (sun / moon) and Background
-
-- **Light / dark** theme for the UI.
-- **Background** turns on **global** hotkeys (via JNativeHook) so calibration keys still fire while **another window has focus** (e.g. the emulator). Leave it off if you only want keys while the timer is focused, or if you prefer not to install global listeners.
-
-### Sound mute
-
-Toggles **beeps** and the **overlap hum** without affecting other system audio.
+Support for Yellow Version is pending.

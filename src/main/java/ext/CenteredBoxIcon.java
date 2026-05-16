@@ -3,10 +3,6 @@ package ext;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Paints a delegate {@link Icon} centered inside a fixed-width / fixed-height box. Unused when the
- * delegate is {@code null} (box still occupies space for consistent layout).
- */
 public final class CenteredBoxIcon implements Icon {
 
     private final Icon delegate;
