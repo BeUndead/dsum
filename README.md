@@ -7,11 +7,19 @@ live while playing the game (rather than pre-calculated charts).
 
 ## Usage
 
-A quick video shows the main usage:
+A couple quick videos to give the idea of how this works:
 
 1. [Scyther in Safari](https://drive.google.com/file/d/1a_D5PaYan9_6bSNX4HQiEpOfHb4vZFix/view?usp=sharing)
-
-These show the basic use of the application.
+2. [Electabuzz in Power Plant](https://drive.google.com/file/d/12DZIDKCpm7euoXu_fbwv3ULNiQCP5srU/view?usp=sharing)
+3. [Jigglypuff Route 3](https://drive.google.com/file/d/1b1zdnR1XtiCpt8Me92b5uLcd0ZvC8n3x/view?usp=sharing)
+4. [NidoranM Route 22](https://drive.google.com/file/d/1YuhdNEqMVDilRCBhmK_ORrv9atVP8lUC/view?usp=sharing)
+5. [Oddish Route 6](https://drive.google.com/file/d/1KVq7WPPNfXnHtd-ztNxGd76GxN7IkoC1/view?usp=sharing)
+6. [Pikachu Viridian Forest](https://drive.google.com/file/d/1sjtmhk3JXeIuDOR01NkcWykcfbILiuBe/view?usp=sharing)
+7. [Weezing in Mansion](https://drive.google.com/file/d/1GuXwgtBKGVgveq0K1XDwo9JUudp5wNOM/view?usp=sharing)
+8. [Clefairy Mt. Moon](https://drive.google.com/file/d/1zQiCKQow4_mY48b0nGVEFwMBkjboqQql/view?usp=sharing)
+9. [Golduck in Seafoam](https://drive.google.com/file/d/1d-DzRSqY7vHFN0xKmst-bCGrkXKj8y2T/view?usp=sharing)
+10. [Paras Mt. Moon](https://drive.google.com/file/d/1nCt83Pz8pbrCX7CncqfttZTYQBD0LqRd/view?usp=sharing)
+11. [Tentacool (high level) Surfing](https://drive.google.com/file/d/1zie9qHV20Ir2FLcNdTlIi1Fn0p6YKNSo/view?usp=sharing)
 
 ### Core keys
 
