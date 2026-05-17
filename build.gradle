@@ -26,7 +26,7 @@ tasks.named('test') {
 
 task runnableJar(type: Jar) {
     manifest {
-        attributes 'Main-Class': "com.com.dsyum.DsumApplication"
+        attributes 'Main-Class': "com.com.dsum.DsumApplication"
     }
     archiveBaseName = "${rootProject.name}"
     from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }

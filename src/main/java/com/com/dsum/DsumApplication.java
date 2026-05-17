@@ -8,6 +8,7 @@ import javax.swing.*;
 public class DsumApplication {
 
     public static void main(String[] args) {
+        System.setProperty("flatlaf.useNativeLibrary", "false");
         try {
             UIManager.setLookAndFeel(new FlatDarkLaf());
         } catch (final UnsupportedLookAndFeelException ulafEx) {
