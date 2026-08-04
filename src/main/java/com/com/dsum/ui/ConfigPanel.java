@@ -43,6 +43,15 @@ public final class ConfigPanel extends JPanel {
                 + "targets automatically, instead of having to un-tick it with the mouse.");
         clearFoundBox.addActionListener(e -> config.setClearFoundTarget(clearFoundBox.isSelected()));
 
+        final JCheckBox globalKeysBox = new JCheckBox("Global keys", config.isGlobalHotkeys());
+        globalKeysBox.setToolTipText("Watch for the hotkeys system wide, so they work while the emulator "
+                + "has focus instead of only while this window does.");
+        globalKeysBox.addActionListener(e -> config.setGlobalHotkeys(globalKeysBox.isSelected()));
+        // The hook can refuse to start, which turns the setting back off, so follow the model rather
+        // than assuming the click stuck.  setSelected does not fire an ActionEvent, so this cannot loop.
+        config.registerGlobalHotkeysChangeListener(
+                enabled -> SwingUtilities.invokeLater(() -> globalKeysBox.setSelected(enabled)));
+
         setLayout(new GridBagLayout());
 
         final GridBagConstraints c = new GridBagConstraints();
@@ -91,6 +100,10 @@ public final class ConfigPanel extends JPanel {
         c.gridx = 8;
         c.weightx = 0.0;
         add(clearFoundBox, c);
+
+        c.gridx = 9;
+        c.weightx = 0.0;
+        add(globalKeysBox, c);
     }
 
 

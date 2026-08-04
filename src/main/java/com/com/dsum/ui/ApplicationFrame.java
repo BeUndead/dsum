@@ -5,6 +5,7 @@ import com.com.dsum.sim.DSumDriver;
 import com.com.dsum.sim.DSumSlotComputer;
 import com.com.dsum.sim.DSumTracker;
 import com.com.dsum.sim.ToolTipProvider;
+import com.com.dsum.ui.util.GlobalHotKeys;
 import com.com.dsum.ui.util.KeyManager;
 import com.com.dsum.util.Colours;
 import com.com.dsum.util.SpriteImageUtil;
@@ -65,7 +66,30 @@ public class ApplicationFrame extends JFrame {
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         KeyManager.install(dsumWheelPanel, driver);
+        installGlobalHotKeys(config, driver);
 
         driver.resume();
+    }
+
+    private void installGlobalHotKeys(final SelectionsConfig config, final DSumDriver driver) {
+        final GlobalHotKeys globalHotKeys = new GlobalHotKeys(driver, this);
+
+        config.registerGlobalHotkeysChangeListener(enabled -> {
+            final String failure = globalHotKeys.setEnabled(enabled);
+            if (failure == null) {
+                return;
+            }
+            // Put the setting back, which un-ticks the box through this same listener list.  Deferred
+            // rather than called straight from here, so that the notification does not re-enter itself.
+            SwingUtilities.invokeLater(() -> {
+                config.setGlobalHotkeys(false);
+                JOptionPane.showMessageDialog(this, failure, "Global keys", JOptionPane.WARNING_MESSAGE);
+            });
+        });
+
+        if (config.isGlobalHotkeys()) {
+            // Restored from the last run, so start the hook without going through a user click.
+            config.setGlobalHotkeys(true);
+        }
     }
 }

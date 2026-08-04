@@ -80,6 +80,35 @@ The 'Lead Level' is only relevant if you are 3 or more levels lower than some Po
 The 'threshold' is what likelihood of your targets appearing do you want the app to turn green on.  The default is 0.1 (or 10%) since (for example) certain slots can **never** go over this value (Slot 10 in the Safari Zone, for instance).
 
 
+## Settings
+
+Two tick boxes sit at the end of the settings row. Both are remembered between runs, and both start off.
+
+### Clear found
+
+When you encounter one of your target slots, it is dropped from the targets automatically, so hunting a
+list of slots does not need the mouse to tick them off one at a time. Only the slot you actually
+encountered is cleared; the rest of your targets are left alone.
+
+### Global keys
+
+Normally the hotkeys only work while this window has focus, which means tabbing away from the emulator.
+Tick **Global keys** and they are watched system wide instead, so **[Space]**, the slot numbers and the
+rest work while you are still playing.
+
+Nothing is swallowed: keys still reach whatever application is focused. That cuts both ways — while this
+is on, pressing **[R]** in a chat window will also prime an exit strategy here. Untick it when you are
+done hunting. Keys pressed with **Ctrl**, **Alt** or **Cmd** held are ignored, so ordinary shortcuts in
+other applications are left alone.
+
+Watching the keyboard system wide needs permission from the operating system:
+
+- **Windows** — works as is.
+- **macOS** — requires **System Settings > Privacy & Security > Accessibility**, and enabling whatever
+  you launched the app from (Terminal, or your IDE). The app has to be restarted after granting it. If
+  the permission is missing, the tick box explains what to do and turns itself back off.
+- **Linux** — needs an X11 session; this does not work under Wayland.
+
 ## Yellow
 
 Support for Yellow Version is pending.

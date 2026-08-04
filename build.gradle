@@ -19,6 +19,9 @@ repositories {
 
 dependencies {
     implementation 'com.formdev:flatlaf:3.5.4'
+    // Needed for the global hotkeys: the JVM only ever sees key events aimed at its own windows,
+    // so watching the keyboard while the emulator has focus takes a native hook.
+    implementation 'com.github.kwhat:jnativehook:2.2.2'
 }
 
 tasks.named('test') {
@@ -27,7 +30,10 @@ tasks.named('test') {
 
 task runnableJar(type: Jar) {
     manifest {
-        attributes 'Main-Class': "com.com.dsum.DsumApplication"
+        attributes 'Main-Class': "com.com.dsum.DsumApplication",
+                // jnativehook loads a native library, which Java 24+ warns about and will eventually
+                // block outright.  Declaring it here keeps 'java -jar' quiet without a command line flag.
+                'Enable-Native-Access': 'ALL-UNNAMED'
     }
     archiveBaseName = "${rootProject.name}"
     from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }

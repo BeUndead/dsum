@@ -21,6 +21,7 @@ public final class UserPreferences {
     public static final String LEAD_LEVEL = "leadLevel";
     public static final String THRESHOLD = "threshold";
     public static final String CLEAR_FOUND_TARGET = "clearFoundTarget";
+    public static final String GLOBAL_HOTKEYS = "globalHotkeys";
 
     private static final Preferences PREFERENCES = openStore();
 

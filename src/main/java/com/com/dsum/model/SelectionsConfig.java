@@ -20,11 +20,13 @@ public final class SelectionsConfig {
     private static final int DEFAULT_LEAD_LEVEL = 70;
     private static final double DEFAULT_THRESHOLD = 0.1;
     private static final boolean DEFAULT_CLEAR_FOUND_TARGET = false;
+    private static final boolean DEFAULT_GLOBAL_HOTKEYS = false;
 
     private final List<Consumer<Game>> onGameChange = new ArrayList<>();
     private final List<Consumer<Route>> onRouteChange = new ArrayList<>();
     private final List<Consumer<Set<EncounterSlot>>> onTargetsChange = new ArrayList<>();
     private final List<Consumer<Integer>> onLeadLevelChange = new ArrayList<>();
+    private final List<Consumer<Boolean>> onGlobalHotkeysChange = new ArrayList<>();
     private final Set<EncounterSlot> targets = new LinkedHashSet<>();
     // All four are restored from the last run.  The numeric ones are clamped on the way in, since a
     // value stored by an older version of the app is not necessarily one this version accepts, and
@@ -37,6 +39,8 @@ public final class SelectionsConfig {
             MIN_THRESHOLD, MAX_THRESHOLD, DEFAULT_THRESHOLD);
     private volatile boolean clearFoundTarget =
             UserPreferences.getBoolean(UserPreferences.CLEAR_FOUND_TARGET, DEFAULT_CLEAR_FOUND_TARGET);
+    private volatile boolean globalHotkeys =
+            UserPreferences.getBoolean(UserPreferences.GLOBAL_HOTKEYS, DEFAULT_GLOBAL_HOTKEYS);
 
 
     public SelectionsConfig() {
@@ -83,6 +87,12 @@ public final class SelectionsConfig {
         UserPreferences.putBoolean(UserPreferences.CLEAR_FOUND_TARGET, clearFoundTarget);
     }
 
+    public void setGlobalHotkeys(final boolean globalHotkeys) {
+        this.globalHotkeys = globalHotkeys;
+        UserPreferences.putBoolean(UserPreferences.GLOBAL_HOTKEYS, globalHotkeys);
+        this.onGlobalHotkeysChange.forEach(c -> c.accept(globalHotkeys));
+    }
+
 
     public void registerGameChangeListener(final Consumer<Game> consumer) {
         this.onGameChange.add(consumer);
@@ -98,6 +108,10 @@ public final class SelectionsConfig {
 
     public void registerLeadLevelChangeListener(final Consumer<Integer> consumer) {
         this.onLeadLevelChange.add(consumer);
+    }
+
+    public void registerGlobalHotkeysChangeListener(final Consumer<Boolean> consumer) {
+        this.onGlobalHotkeysChange.add(consumer);
     }
 
     public Route getRoute() {
@@ -122,6 +136,10 @@ public final class SelectionsConfig {
 
     public boolean isClearFoundTarget() {
         return clearFoundTarget;
+    }
+
+    public boolean isGlobalHotkeys() {
+        return globalHotkeys;
     }
 
     private static int clamp(final int value, final int min, final int max) {
