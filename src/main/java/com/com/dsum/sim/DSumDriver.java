@@ -327,8 +327,8 @@ public final class DSumDriver {
             final double dsum = tracker.getDSum();
             final double diffFromBattle = dsum - dsumAtBattleStart;
 
-            final BattleExit battleExit
-                    = RotationUtilities.onBattleExit(game, route, 70, slot, EncounterExitStrategy.PLAYER_GOT_AWAY, dsum);
+            final BattleExit battleExit = RotationUtilities.onBattleExit(
+                    game, route, this.config.getLeadLevel(), slot, EncounterExitStrategy.PLAYER_GOT_AWAY, dsum);
 
             final Map<Integer, Integer> slotCalibration = battleExit.suggestions();
             final Map<Integer, Integer> updatedCalibrationRange;
