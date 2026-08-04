@@ -31,7 +31,8 @@ public final class ConfigPanel extends JPanel {
         final JLabel leadLabel = new JLabel("Lead Lv.");
         leadLabel.setLabelFor(leadSpinner);
 
-        final JSpinner thresholdSpinner = new JSpinner(new SpinnerNumberModel(config.getThreshold(), 0.0, 1.0, 0.05));
+        final JSpinner thresholdSpinner = new JSpinner(new SpinnerNumberModel(config.getThreshold(),
+                SelectionsConfig.MIN_THRESHOLD, SelectionsConfig.MAX_THRESHOLD, 0.05));
         thresholdSpinner.setPreferredSize(new Dimension(leadSpinner.getPreferredSize().width, thresholdSpinner.getPreferredSize().height));
         thresholdSpinner.addChangeListener(e -> config.setThreshold(((Number) thresholdSpinner.getValue()).doubleValue()));
         final JLabel thresholdLabel = new JLabel("Threshold");

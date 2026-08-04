@@ -10,27 +10,73 @@ import java.util.prefs.Preferences;
 // On macOS the values are owned by the cfprefsd daemon rather than by us, so the plist on disk
 // can lag behind a write; "defaults read com.apple.java.util.prefs" is the reliable way to
 // inspect what was actually stored.
+//
+// Every read takes the fallback to use when nothing is stored yet, or when what is stored can no
+// longer be understood.  Callers still have to range check what comes back: a value written by an
+// older version of the app is not necessarily one this version considers valid.
 public final class UserPreferences {
 
-    private static final String LEAD_LEVEL_KEY = "leadLevel";
+    public static final String GAME = "game";
+    public static final String ROUTE = "route";
+    public static final String LEAD_LEVEL = "leadLevel";
+    public static final String THRESHOLD = "threshold";
 
     private static final Preferences PREFERENCES = openStore();
 
     private UserPreferences() {
     }
 
-    public static int getLeadLevel(final int fallback) {
+    public static int getInt(final String key, final int fallback) {
         if (PREFERENCES == null) {
             return fallback;
         }
-        return PREFERENCES.getInt(LEAD_LEVEL_KEY, fallback);
+        return PREFERENCES.getInt(key, fallback);
     }
 
-    public static void setLeadLevel(final int leadLevel) {
+    public static void putInt(final String key, final int value) {
         if (PREFERENCES == null) {
             return;
         }
-        PREFERENCES.putInt(LEAD_LEVEL_KEY, leadLevel);
+        PREFERENCES.putInt(key, value);
+    }
+
+    public static double getDouble(final String key, final double fallback) {
+        if (PREFERENCES == null) {
+            return fallback;
+        }
+        return PREFERENCES.getDouble(key, fallback);
+    }
+
+    public static void putDouble(final String key, final double value) {
+        if (PREFERENCES == null) {
+            return;
+        }
+        PREFERENCES.putDouble(key, value);
+    }
+
+    // Enums are stored by name() rather than by ordinal, so that reordering the constants does not
+    // silently turn a stored value into a different one.
+    public static <E extends Enum<E>> E getEnum(final String key, final E fallback) {
+        if (PREFERENCES == null) {
+            return fallback;
+        }
+        final String stored = PREFERENCES.get(key, null);
+        if (stored == null) {
+            return fallback;
+        }
+        try {
+            return Enum.valueOf(fallback.getDeclaringClass(), stored);
+        } catch (final IllegalArgumentException unknownConstantEx) {
+            // The constant was renamed or removed since it was written; fall back rather than fail.
+            return fallback;
+        }
+    }
+
+    public static void putEnum(final String key, final Enum<?> value) {
+        if (PREFERENCES == null) {
+            return;
+        }
+        PREFERENCES.put(key, value.name());
     }
 
     private static Preferences openStore() {
