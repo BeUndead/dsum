@@ -23,8 +23,10 @@ A couple quick videos to give the idea of how this works:
 
 ### Core keys
 
-- **[Space]** — You pressed this when the **battle wipe ends** (sync as closely as you can to the moment the encounter actually starts / the wipe animation finishes; the videos are the best guide).
-- **[1]–[9], [0]** — When you dismiss **“Got away safely!”**, press the digit for the **slot you actually got** (**0** = slot 10). This **calibrates** the wheel: the timer infers where the DSum value was at encounter time and starts rotating from there in overworld (count-down) mode.
+- **[Space]** — Marks **both ends** of an encounter, and both are timing critical (sync as closely as you can; the videos are the best guide):
+  - on the way **in**, when the **battle wipe ends** / the encounter actually starts;
+  - on the way **out**, when you **clear the last text box**. This **calibrates** the wheel: the timer infers where the DSum value was at encounter time and starts rotating from there in overworld (count-down) mode.
+- **[1]–[9], [0]** — The **slot you actually got** (**0** = slot 10). Press this at **any point during the battle** — as soon as you can see what you ran into. Pressing the same digit again clears it. This only records the slot; it does **not** end the battle. **[Space]** will not leave the battle until a slot has been entered.
 
 #### Optional adjustment keys (after you are used to the basics):
 
@@ -42,9 +44,13 @@ Enter a wild battle normally. When the wipe ends, press **Space**.
 
 The wheel switches to **in-battle** behaviour: DSum advances at the in-battle rate while the needle is fixed at the top.
 
-### 3. Finish on “Got away safely!”
+### 3. Enter the slot you got
 
-Run from the encounter. When the message appears and you clear it, press the number key for the **slot you just saw** (**1**–**9**, **0** for slot 10).
+At any point during the battle, press the number key for the **slot you just saw** (**1**–**9**, **0** for slot 10). There is no rush — this only records the slot, and pressing the same digit again clears it if you mistyped. The state chip shows `Slot ?` until you have entered one.
+
+### 4. Finish on “Got away safely!”
+
+Run from the encounter. When the message appears and you clear it, press **Space** again.
 
 From that moment the app:
 
@@ -59,15 +65,15 @@ For other battle end types, there are buttons which (while 'In Battle' mode) you
 - [B] = Pokemon captured and sent to PC.
 - [R] = Pokemon ran (Safari Zone exclusive).
 
-For each of these, press the button at any time while 'In Battle' mode; and continue to press the slot number that you encountered, when clearing trhe final text box.
+For each of these, press the button at any time while 'In Battle' mode. They work exactly like the slot number keys: they record a choice, and it is **Space** that ends the battle when you clear the final text box.
 
-### 4. Hunting
+### 5. Hunting
 
 When **any** selected **target** overlaps the wedge, the UI treats that as “good to search”: background tint. **Suggested** slots are a separate hint; **targets** are drawn with an extra **green** highlight on top so your goal stays obvious even when several slots in the chain are highlighted in amber.
 
 If your first calibration is a **very wide** slot, the wedge can be huge. A useful approach is to calibrate roughly on that slot, aim at any of the smaller slots, so that the large wedge covers multiple slots.  Then, you are likely to encounter a much smaller window on your next encounter.
 
-### 5. Notes
+### 6. Notes
 
 The 'Lead Level' is only relevant if you are 3 or more levels lower than some Pokemon on the route.  This causes a different entry animation, so takes a different amount of time.
 

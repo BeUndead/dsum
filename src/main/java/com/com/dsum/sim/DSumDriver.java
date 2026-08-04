@@ -42,6 +42,9 @@ public final class DSumDriver {
     private double[] slotProbCache = new double[EncounterSlot.values().length];
 
     private volatile EncounterExitStrategy exitStrategy = EncounterExitStrategy.PLAYER_GOT_AWAY;
+    // The slot the player says they encountered.  Primed by the number keys at any point during the
+    // battle, and consumed when they press [SPACE] again to say the battle is over.
+    private volatile EncounterSlot primedSlot = null;
     private volatile Long lastNow;
     private volatile boolean paused = true;
 
@@ -145,6 +148,10 @@ public final class DSumDriver {
         return exitStrategy;
     }
 
+    public EncounterSlot getPrimedSlot() {
+        return primedSlot;
+    }
+
 
     private Map<Integer, Integer> hypothesisMapForBattleEntry(final BattleEntry battleEntry) {
         final int atGeneration = battleEntry.atGeneration();
@@ -233,18 +240,31 @@ public final class DSumDriver {
             this.battleEntrySlotProbabilities = null;
             slotProbCacheCenter = Integer.MIN_VALUE;
             this.exitStrategy = EncounterExitStrategy.PLAYER_GOT_AWAY;
+            this.primedSlot = null;
             markUpdate();
             markUpdateUncertainty();
             markUpdateSuggestions(null);
         }
     }
 
-    public void battleEntered() {
+    /**
+     * [SPACE] marks both ends of an encounter: the wipe finishing on the way in, and the last text box
+     * being cleared on the way out.  Both are the timing critical moments, so both read the DSum at the
+     * instant the key is pressed; which slot was encountered and how the battle ended are primed
+     * separately, at whatever point during the battle the player gets around to entering them.
+     */
+    public void toggleBattle() {
         synchronized (monitor) {
             if (isInBattle()) {
-                // Can't enter a battle when we're already in one.
-                return;
+                battleExited();
+            } else {
+                battleEntered();
             }
+        }
+    }
+
+    private void battleEntered() {
+        synchronized (monitor) {
             final Game game = this.config.getGame();
             final Route route = this.config.getRoute();
 
@@ -272,10 +292,29 @@ public final class DSumDriver {
         }
     }
 
-    public void calibrateOn(final EncounterSlot slot) {
+    /**
+     * Records which slot the player encountered, without ending the battle.  This mirrors
+     * {@link #primeEncounterExitStrategy}: press at any point during the battle, press the same number
+     * again to clear it, and it is only acted on when [SPACE] ends the battle.
+     */
+    public void primeEncounterSlot(final EncounterSlot slot) {
         synchronized (monitor) {
-            if (!isInBattle()) {
-                // Can't calibrate when we're not in battle.
+            if (slot == null || !isInBattle()) {
+                // Only meaningful while an encounter is in progress.
+                return;
+            }
+            this.primedSlot = this.primedSlot == slot ? null : slot;
+            markUpdate();
+        }
+    }
+
+    private void battleExited() {
+        synchronized (monitor) {
+            final EncounterSlot slot = this.primedSlot;
+            if (slot == null) {
+                // No slot entered yet, so there is nothing to calibrate against.  Stay in the battle
+                // rather than dropping the encounter, which is what happened before this was split out:
+                // naming the slot was the only way out of a battle, short of [DELETE].
                 return;
             }
 
@@ -307,6 +346,7 @@ public final class DSumDriver {
             this.battleEntrySlotProbabilities = null;
             slotProbCacheCenter = Integer.MIN_VALUE;
             this.exitStrategy = EncounterExitStrategy.PLAYER_GOT_AWAY;
+            this.primedSlot = null;
             markUpdate();
             markUpdateSuggestions(null);
 

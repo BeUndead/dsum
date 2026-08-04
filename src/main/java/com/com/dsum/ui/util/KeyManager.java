@@ -11,7 +11,7 @@ import java.awt.event.KeyEvent;
 public final class KeyManager {
 
     private static final String A_TOGGLE_PAUSE = "dsum.togglePause";
-    private static final String A_BATTLE_ENTERED = "dsum.battleEntered";
+    private static final String A_BATTLE_TOGGLE = "dsum.battleToggle";
     private static final String A_STEP_BACK = "dsum.stepBack";
     private static final String A_STEP_FORWARD = "dsum.stepForward";
     private static final String A_RESET = "dsum.reset";
@@ -33,17 +33,17 @@ public final class KeyManager {
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_P, 0), A_TOGGLE_PAUSE);
         actionMap.put(A_TOGGLE_PAUSE, new DriverAction(driver, DSumDriver::togglePause));
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), A_BATTLE_ENTERED);
-        actionMap.put(A_BATTLE_ENTERED, new DriverAction(driver, DSumDriver::battleEntered));
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), A_BATTLE_TOGGLE);
+        actionMap.put(A_BATTLE_TOGGLE, new DriverAction(driver, DSumDriver::toggleBattle));
 
         for (int vk = KeyEvent.VK_1; vk <= KeyEvent.VK_9; vk++) {
             final int ordinal = vk - KeyEvent.VK_1;
-            final String id = "dsum.calibrate." + ordinal;
+            final String id = "dsum.primeSlot." + ordinal;
             inputMap.put(KeyStroke.getKeyStroke(vk, 0), id);
-            actionMap.put(id, new DriverAction(driver, d -> d.calibrateOn(EncounterSlot.values()[ordinal])));
+            actionMap.put(id, new DriverAction(driver, d -> d.primeEncounterSlot(EncounterSlot.values()[ordinal])));
         }
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_0, 0), "dsum.calibrate.9");
-        actionMap.put("dsum.calibrate.9", new DriverAction(driver, d -> d.calibrateOn(EncounterSlot.values()[9])));
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_0, 0), "dsum.primeSlot.9");
+        actionMap.put("dsum.primeSlot.9", new DriverAction(driver, d -> d.primeEncounterSlot(EncounterSlot.values()[9])));
 
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, 0), A_STEP_BACK);
         actionMap.put(A_STEP_BACK, new DriverAction(driver, d -> d.step(-1)));
