@@ -20,6 +20,7 @@ public final class UserPreferences {
     public static final String ROUTE = "route";
     public static final String LEAD_LEVEL = "leadLevel";
     public static final String THRESHOLD = "threshold";
+    public static final String CLEAR_FOUND_TARGET = "clearFoundTarget";
 
     private static final Preferences PREFERENCES = openStore();
 
@@ -52,6 +53,20 @@ public final class UserPreferences {
             return;
         }
         PREFERENCES.putDouble(key, value);
+    }
+
+    public static boolean getBoolean(final String key, final boolean fallback) {
+        if (PREFERENCES == null) {
+            return fallback;
+        }
+        return PREFERENCES.getBoolean(key, fallback);
+    }
+
+    public static void putBoolean(final String key, final boolean value) {
+        if (PREFERENCES == null) {
+            return;
+        }
+        PREFERENCES.putBoolean(key, value);
     }
 
     // Enums are stored by name() rather than by ordinal, so that reordering the constants does not

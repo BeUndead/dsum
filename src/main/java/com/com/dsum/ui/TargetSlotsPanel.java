@@ -37,6 +37,9 @@ public class TargetSlotsPanel extends JPanel {
 
         this.config.registerGameChangeListener(game -> refreshButtons());
         this.config.registerRouteChangeListener(route -> refreshButtons());
+        // The toggles are otherwise only moved by the mouse, so they need to follow the targets when
+        // something else changes them, such as a found target being cleared after an encounter.
+        this.config.registerTargetsChangeListener(this::syncButtonSelection);
     }
 
     private static Icon buildIcon(final Map<Species, ImageIcon> sprites, final Game game, final SlotButton button, final EncounterSlot slot, final Encounter encounter) {
@@ -83,6 +86,17 @@ public class TargetSlotsPanel extends JPanel {
             config.setTargets(localTargets);
         });
         return button;
+    }
+
+    private void syncButtonSelection(final Set<EncounterSlot> targets) {
+        // Snapshot now rather than inside the invokeLater, so a later edit cannot race this repaint.
+        // setSelected does not fire an ActionEvent, so this will not loop back through the toggles.
+        final Set<EncounterSlot> snapshot = new HashSet<>(targets);
+        SwingUtilities.invokeLater(() -> {
+            for (final SlotButton slotButton : slotButtons) {
+                slotButton.setSelected(snapshot.contains(slotButton.slot));
+            }
+        });
     }
 
     private void refreshButtons() {

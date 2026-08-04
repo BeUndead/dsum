@@ -6,9 +6,11 @@ import com.com.dsum.util.*;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public final class DSumDriver {
@@ -347,6 +349,7 @@ public final class DSumDriver {
             slotProbCacheCenter = Integer.MIN_VALUE;
             this.exitStrategy = EncounterExitStrategy.PLAYER_GOT_AWAY;
             this.primedSlot = null;
+            clearFoundTarget(slot);
             markUpdate();
             markUpdateSuggestions(null);
 
@@ -354,6 +357,21 @@ public final class DSumDriver {
         }
     }
 
+
+    /**
+     * Drops a slot from the targets once it has actually been encountered, so that hunting a list of
+     * slots does not need the mouse to tick them off one by one.  Off by default.
+     */
+    private void clearFoundTarget(final EncounterSlot found) {
+        if (!config.isClearFoundTarget()) {
+            return;
+        }
+        // getTargets() hands back the live set, so copy before editing it.
+        final Set<EncounterSlot> remaining = new LinkedHashSet<>(config.getTargets());
+        if (remaining.remove(found)) {
+            config.setTargets(remaining);
+        }
+    }
 
     private void runUpdate(final ActionEvent ignored) {
         synchronized (monitor) {

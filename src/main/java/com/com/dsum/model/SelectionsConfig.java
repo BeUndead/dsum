@@ -19,6 +19,7 @@ public final class SelectionsConfig {
     private static final Route DEFAULT_ROUTE = Route.SAFARI_ZONE_CENTER;
     private static final int DEFAULT_LEAD_LEVEL = 70;
     private static final double DEFAULT_THRESHOLD = 0.1;
+    private static final boolean DEFAULT_CLEAR_FOUND_TARGET = false;
 
     private final List<Consumer<Game>> onGameChange = new ArrayList<>();
     private final List<Consumer<Route>> onRouteChange = new ArrayList<>();
@@ -34,6 +35,8 @@ public final class SelectionsConfig {
             MIN_LEAD_LEVEL, MAX_LEAD_LEVEL);
     private volatile double threshold = clamp(UserPreferences.getDouble(UserPreferences.THRESHOLD, DEFAULT_THRESHOLD),
             MIN_THRESHOLD, MAX_THRESHOLD, DEFAULT_THRESHOLD);
+    private volatile boolean clearFoundTarget =
+            UserPreferences.getBoolean(UserPreferences.CLEAR_FOUND_TARGET, DEFAULT_CLEAR_FOUND_TARGET);
 
 
     public SelectionsConfig() {
@@ -75,6 +78,11 @@ public final class SelectionsConfig {
         UserPreferences.putDouble(UserPreferences.THRESHOLD, threshold);
     }
 
+    public void setClearFoundTarget(final boolean clearFoundTarget) {
+        this.clearFoundTarget = clearFoundTarget;
+        UserPreferences.putBoolean(UserPreferences.CLEAR_FOUND_TARGET, clearFoundTarget);
+    }
+
 
     public void registerGameChangeListener(final Consumer<Game> consumer) {
         this.onGameChange.add(consumer);
@@ -110,6 +118,10 @@ public final class SelectionsConfig {
 
     public int getLeadLevel() {
         return leadLevel;
+    }
+
+    public boolean isClearFoundTarget() {
+        return clearFoundTarget;
     }
 
     private static int clamp(final int value, final int min, final int max) {

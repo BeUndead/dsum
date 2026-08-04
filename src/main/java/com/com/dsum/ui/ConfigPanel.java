@@ -38,6 +38,11 @@ public final class ConfigPanel extends JPanel {
         final JLabel thresholdLabel = new JLabel("Threshold");
         thresholdLabel.setLabelFor(thresholdSpinner);
 
+        final JCheckBox clearFoundBox = new JCheckBox("Clear found", config.isClearFoundTarget());
+        clearFoundBox.setToolTipText("When you encounter one of your target slots, drop it from the "
+                + "targets automatically, instead of having to un-tick it with the mouse.");
+        clearFoundBox.addActionListener(e -> config.setClearFoundTarget(clearFoundBox.isSelected()));
+
         setLayout(new GridBagLayout());
 
         final GridBagConstraints c = new GridBagConstraints();
@@ -81,6 +86,11 @@ public final class ConfigPanel extends JPanel {
         c.gridx = 7;
         c.weightx = 1.0;
         add(thresholdSpinner, c);
+
+        c.insets = leftSpace;
+        c.gridx = 8;
+        c.weightx = 0.0;
+        add(clearFoundBox, c);
     }
 
 
