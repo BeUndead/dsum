@@ -25,16 +25,32 @@ public final class ConfigPanel extends JPanel {
         final JLabel routeLabel = new JLabel("Route");
         routeLabel.setLabelFor(routeSelector);
 
-        final JSpinner leadSpinner = new JSpinner(new SpinnerNumberModel(config.getLeadLevel(), 1, 100, 1));
+        final JSpinner leadSpinner = new JSpinner(new SpinnerNumberModel(config.getLeadLevel(),
+                SelectionsConfig.MIN_LEAD_LEVEL, SelectionsConfig.MAX_LEAD_LEVEL, 1));
         leadSpinner.addChangeListener(e -> config.setLeadLevel(((Number) leadSpinner.getValue()).intValue()));
         final JLabel leadLabel = new JLabel("Lead Lv.");
         leadLabel.setLabelFor(leadSpinner);
 
-        final JSpinner thresholdSpinner = new JSpinner(new SpinnerNumberModel(config.getThreshold(), 0.0, 1.0, 0.05));
+        final JSpinner thresholdSpinner = new JSpinner(new SpinnerNumberModel(config.getThreshold(),
+                SelectionsConfig.MIN_THRESHOLD, SelectionsConfig.MAX_THRESHOLD, 0.05));
         thresholdSpinner.setPreferredSize(new Dimension(leadSpinner.getPreferredSize().width, thresholdSpinner.getPreferredSize().height));
         thresholdSpinner.addChangeListener(e -> config.setThreshold(((Number) thresholdSpinner.getValue()).doubleValue()));
         final JLabel thresholdLabel = new JLabel("Threshold");
         thresholdLabel.setLabelFor(thresholdSpinner);
+
+        final JCheckBox clearFoundBox = new JCheckBox("Clear found", config.isClearFoundTarget());
+        clearFoundBox.setToolTipText("When you encounter one of your target slots, drop it from the "
+                + "targets automatically, instead of having to un-tick it with the mouse.");
+        clearFoundBox.addActionListener(e -> config.setClearFoundTarget(clearFoundBox.isSelected()));
+
+        final JCheckBox globalKeysBox = new JCheckBox("Global keys", config.isGlobalHotkeys());
+        globalKeysBox.setToolTipText("Watch for the hotkeys system wide, so they work while the emulator "
+                + "has focus instead of only while this window does.");
+        globalKeysBox.addActionListener(e -> config.setGlobalHotkeys(globalKeysBox.isSelected()));
+        // The hook can refuse to start, which turns the setting back off, so follow the model rather
+        // than assuming the click stuck.  setSelected does not fire an ActionEvent, so this cannot loop.
+        config.registerGlobalHotkeysChangeListener(
+                enabled -> SwingUtilities.invokeLater(() -> globalKeysBox.setSelected(enabled)));
 
         setLayout(new GridBagLayout());
 
@@ -79,6 +95,15 @@ public final class ConfigPanel extends JPanel {
         c.gridx = 7;
         c.weightx = 1.0;
         add(thresholdSpinner, c);
+
+        c.insets = leftSpace;
+        c.gridx = 8;
+        c.weightx = 0.0;
+        add(clearFoundBox, c);
+
+        c.gridx = 9;
+        c.weightx = 0.0;
+        add(globalKeysBox, c);
     }
 
 

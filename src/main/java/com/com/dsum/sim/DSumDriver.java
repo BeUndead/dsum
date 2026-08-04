@@ -6,9 +6,11 @@ import com.com.dsum.util.*;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public final class DSumDriver {
@@ -42,6 +44,9 @@ public final class DSumDriver {
     private double[] slotProbCache = new double[EncounterSlot.values().length];
 
     private volatile EncounterExitStrategy exitStrategy = EncounterExitStrategy.PLAYER_GOT_AWAY;
+    // The slot the player says they encountered.  Primed by the number keys at any point during the
+    // battle, and consumed when they press [SPACE] again to say the battle is over.
+    private volatile EncounterSlot primedSlot = null;
     private volatile Long lastNow;
     private volatile boolean paused = true;
 
@@ -145,6 +150,10 @@ public final class DSumDriver {
         return exitStrategy;
     }
 
+    public EncounterSlot getPrimedSlot() {
+        return primedSlot;
+    }
+
 
     private Map<Integer, Integer> hypothesisMapForBattleEntry(final BattleEntry battleEntry) {
         final int atGeneration = battleEntry.atGeneration();
@@ -233,18 +242,31 @@ public final class DSumDriver {
             this.battleEntrySlotProbabilities = null;
             slotProbCacheCenter = Integer.MIN_VALUE;
             this.exitStrategy = EncounterExitStrategy.PLAYER_GOT_AWAY;
+            this.primedSlot = null;
             markUpdate();
             markUpdateUncertainty();
             markUpdateSuggestions(null);
         }
     }
 
-    public void battleEntered() {
+    /**
+     * [SPACE] marks both ends of an encounter: the wipe finishing on the way in, and the last text box
+     * being cleared on the way out.  Both are the timing critical moments, so both read the DSum at the
+     * instant the key is pressed; which slot was encountered and how the battle ended are primed
+     * separately, at whatever point during the battle the player gets around to entering them.
+     */
+    public void toggleBattle() {
         synchronized (monitor) {
             if (isInBattle()) {
-                // Can't enter a battle when we're already in one.
-                return;
+                battleExited();
+            } else {
+                battleEntered();
             }
+        }
+    }
+
+    private void battleEntered() {
+        synchronized (monitor) {
             final Game game = this.config.getGame();
             final Route route = this.config.getRoute();
 
@@ -272,22 +294,43 @@ public final class DSumDriver {
         }
     }
 
-    public void calibrateOn(final EncounterSlot slot) {
+    /**
+     * Records which slot the player encountered, without ending the battle.  This mirrors
+     * {@link #primeEncounterExitStrategy}: press at any point during the battle, press the same number
+     * again to clear it, and it is only acted on when [SPACE] ends the battle.
+     */
+    public void primeEncounterSlot(final EncounterSlot slot) {
         synchronized (monitor) {
-            if (!isInBattle()) {
-                // Can't calibrate when we're not in battle.
+            if (slot == null || !isInBattle()) {
+                // Only meaningful while an encounter is in progress.
+                return;
+            }
+            this.primedSlot = this.primedSlot == slot ? null : slot;
+            markUpdate();
+        }
+    }
+
+    private void battleExited() {
+        synchronized (monitor) {
+            final EncounterSlot slot = this.primedSlot;
+            if (slot == null) {
+                // No slot entered yet, so there is nothing to calibrate against.  Stay in the battle
+                // rather than dropping the encounter, which is what happened before this was split out:
+                // naming the slot was the only way out of a battle, short of [DELETE].
                 return;
             }
 
             final Game game = this.config.getGame();
             final Route route = this.config.getRoute();
+            // Read before the reset further down, which puts this back to the default for the next battle.
+            final EncounterExitStrategy exit = this.exitStrategy;
 
             final double dsumAtBattleStart = this.dsumAtBattleStart;
             final double dsum = tracker.getDSum();
             final double diffFromBattle = dsum - dsumAtBattleStart;
 
-            final BattleExit battleExit
-                    = RotationUtilities.onBattleExit(game, route, 70, slot, EncounterExitStrategy.PLAYER_GOT_AWAY, dsum);
+            final BattleExit battleExit = RotationUtilities.onBattleExit(
+                    game, route, this.config.getLeadLevel(), slot, exit, dsum);
 
             final Map<Integer, Integer> slotCalibration = battleExit.suggestions();
             final Map<Integer, Integer> updatedCalibrationRange;
@@ -307,6 +350,8 @@ public final class DSumDriver {
             this.battleEntrySlotProbabilities = null;
             slotProbCacheCenter = Integer.MIN_VALUE;
             this.exitStrategy = EncounterExitStrategy.PLAYER_GOT_AWAY;
+            this.primedSlot = null;
+            clearFoundTarget(slot);
             markUpdate();
             markUpdateSuggestions(null);
 
@@ -314,6 +359,21 @@ public final class DSumDriver {
         }
     }
 
+
+    /**
+     * Drops a slot from the targets once it has actually been encountered, so that hunting a list of
+     * slots does not need the mouse to tick them off one by one.  Off by default.
+     */
+    private void clearFoundTarget(final EncounterSlot found) {
+        if (!config.isClearFoundTarget()) {
+            return;
+        }
+        // getTargets() hands back the live set, so copy before editing it.
+        final Set<EncounterSlot> remaining = new LinkedHashSet<>(config.getTargets());
+        if (remaining.remove(found)) {
+            config.setTargets(remaining);
+        }
+    }
 
     private void runUpdate(final ActionEvent ignored) {
         synchronized (monitor) {
