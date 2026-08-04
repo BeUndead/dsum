@@ -322,13 +322,15 @@ public final class DSumDriver {
 
             final Game game = this.config.getGame();
             final Route route = this.config.getRoute();
+            // Read before the reset further down, which puts this back to the default for the next battle.
+            final EncounterExitStrategy exit = this.exitStrategy;
 
             final double dsumAtBattleStart = this.dsumAtBattleStart;
             final double dsum = tracker.getDSum();
             final double diffFromBattle = dsum - dsumAtBattleStart;
 
             final BattleExit battleExit = RotationUtilities.onBattleExit(
-                    game, route, this.config.getLeadLevel(), slot, EncounterExitStrategy.PLAYER_GOT_AWAY, dsum);
+                    game, route, this.config.getLeadLevel(), slot, exit, dsum);
 
             final Map<Integer, Integer> slotCalibration = battleExit.suggestions();
             final Map<Integer, Integer> updatedCalibrationRange;
