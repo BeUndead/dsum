@@ -1,5 +1,7 @@
 package com.com.dsum.model;
 
+import com.com.dsum.util.UserPreferences;
+
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -8,6 +10,11 @@ import java.util.function.Consumer;
 
 public final class SelectionsConfig {
 
+    public static final int MIN_LEAD_LEVEL = 1;
+    public static final int MAX_LEAD_LEVEL = 255;
+
+    private static final int DEFAULT_LEAD_LEVEL = 70;
+
     private final List<Consumer<Game>> onGameChange = new ArrayList<>();
     private final List<Consumer<Route>> onRouteChange = new ArrayList<>();
     private final List<Consumer<Set<EncounterSlot>>> onTargetsChange = new ArrayList<>();
@@ -15,7 +22,8 @@ public final class SelectionsConfig {
     private final Set<EncounterSlot> targets = new LinkedHashSet<>();
     private volatile Game game = Game.RED;
     private volatile Route route = Route.SAFARI_ZONE_CENTER;
-    private volatile int leadLevel = 70;
+    // Restored from the last run, clamped in case the stored value is stale or hand-edited.
+    private volatile int leadLevel = clampLeadLevel(UserPreferences.getLeadLevel(DEFAULT_LEAD_LEVEL));
     private volatile double threshold = 0.1;
 
 
@@ -41,7 +49,11 @@ public final class SelectionsConfig {
     }
 
     public void setLeadLevel(final int leadLevel) {
+        if (leadLevel < MIN_LEAD_LEVEL || leadLevel > MAX_LEAD_LEVEL) {
+            return;
+        }
         this.leadLevel = leadLevel;
+        UserPreferences.setLeadLevel(leadLevel);
         this.onLeadLevelChange.forEach(c -> c.accept(leadLevel));
     }
 
@@ -87,5 +99,9 @@ public final class SelectionsConfig {
 
     public int getLeadLevel() {
         return leadLevel;
+    }
+
+    private static int clampLeadLevel(final int leadLevel) {
+        return Math.min(MAX_LEAD_LEVEL, Math.max(MIN_LEAD_LEVEL, leadLevel));
     }
 }

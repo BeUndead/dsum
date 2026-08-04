@@ -25,7 +25,8 @@ public final class ConfigPanel extends JPanel {
         final JLabel routeLabel = new JLabel("Route");
         routeLabel.setLabelFor(routeSelector);
 
-        final JSpinner leadSpinner = new JSpinner(new SpinnerNumberModel(config.getLeadLevel(), 1, 255, 1));
+        final JSpinner leadSpinner = new JSpinner(new SpinnerNumberModel(config.getLeadLevel(),
+                SelectionsConfig.MIN_LEAD_LEVEL, SelectionsConfig.MAX_LEAD_LEVEL, 1));
         leadSpinner.addChangeListener(e -> config.setLeadLevel(((Number) leadSpinner.getValue()).intValue()));
         final JLabel leadLabel = new JLabel("Lead Lv.");
         leadLabel.setLabelFor(leadSpinner);
