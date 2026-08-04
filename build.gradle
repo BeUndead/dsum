@@ -6,10 +6,11 @@ group = 'com.com'
 version = '1.2.0'
 description = 'dsum'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+// No toolchain pin: the build runs on whatever JDK 17+ is installed (17, 21, 25, ...).
+// options.release compiles against the Java 17 API and emits Java 17 bytecode either
+// way, so the jar is identical and runs on any Java 17 or newer runtime.
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
 }
 
 repositories {
